@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace FlowerShop.Data;
+﻿namespace FlowerShop.Data;
 
 public partial class Product
 {
@@ -14,7 +11,7 @@ public partial class Product
     public int? CategoryId { get; set; }
     public int? StockQuantity { get; set; }
     public int? SoldQuantity { get; set; }
-    public decimal? Rating { get; set; }              
+    public decimal? Rating { get; set; }
     public bool? IsActive { get; set; }
     public bool? IsFeatured { get; set; }
     public DateTime? CreatedDate { get; set; }
@@ -23,4 +20,5 @@ public partial class Product
     public virtual Category? Category { get; set; }
     public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public virtual ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
 }

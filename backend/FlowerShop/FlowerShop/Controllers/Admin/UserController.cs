@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace FlowerShop.Controllers.Admin
 {
-    [Route("api/admin/users")] 
+    [Route("api/admin/users")]
     [ApiController]
-    [Authorize(Roles = "Admin")] 
+    [Authorize(Roles = "Admin")]
     public class UserController : ControllerBase
     {
         private readonly FlowerContext _context;
@@ -18,33 +18,20 @@ namespace FlowerShop.Controllers.Admin
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] UserSearchParams filter)
+        public async Task<IActionResult> GetAll([FromQuery] UserSearchParams f)
         {
-            var query = _context.Users.AsQueryable();
+            var q = _context.Users.AsQueryable();
 
-            if (!string.IsNullOrEmpty(filter.Search))
-            {
-                query = query.Where(u => u.FullName.Contains(filter.Search) ||
-                                       u.Email.Contains(filter.Search) ||
-                                       u.Phone.Contains(filter.Search));
-            }
+            if (!string.IsNullOrEmpty(f.Search))
+                q = q.Where(u => u.FullName.Contains(f.Search) || u.Email.Contains(f.Search) || u.Phone.Contains(f.Search));
+            if (!string.IsNullOrEmpty(f.Role))
+                q = q.Where(u => u.Role == f.Role);
+            if (f.IsActive.HasValue)
+                q = q.Where(u => u.IsActive == f.IsActive);
 
-            if (!string.IsNullOrEmpty(filter.Role))
-            {
-                query = query.Where(u => u.Role == filter.Role);
-            }
-
-            if (filter.IsActive.HasValue)
-            {
-                query = query.Where(u => u.IsActive == filter.IsActive);
-            }
-
-            var total = await query.CountAsync();
-            var items = await query
-                .OrderByDescending(u => u.CreatedDate)
-                .Skip((filter.Page - 1) * filter.Limit)
-                .Take(filter.Limit)
-                .ToListAsync();
+            var total = await q.CountAsync();
+            var items = await q.OrderByDescending(u => u.CreatedDate)
+                .Skip((f.Page - 1) * f.Limit).Take(f.Limit).ToListAsync();
 
             return Ok(new { total, items });
         }
@@ -52,43 +39,34 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var user = await _context.Users
-                .Include(u => u.Orders) 
-                .FirstOrDefaultAsync(u => u.UserId == id);
-
-            if (user == null) return NotFound(new { message = "Không tìm thấy người dùng" });
-
-            user.PasswordHash = null;
-
-            return Ok(user);
+            var u = await _context.Users.Include(x => x.Orders).FirstOrDefaultAsync(x => x.UserId == id);
+            if (u == null) return NotFound();
+            u.PasswordHash = "";
+            return Ok(u);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] FlowerShop.Data.User updateData)
+        public async Task<IActionResult> Update(int id, [FromBody] User data)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound();
-
-            user.FullName = updateData.FullName;
-            user.Phone = updateData.Phone;
-            user.Address = updateData.Address;
-            user.Role = updateData.Role;
-            user.IsActive = updateData.IsActive;
-
+            var u = await _context.Users.FindAsync(id);
+            if (u == null) return NotFound();
+            u.FullName = data.FullName;
+            u.Phone = data.Phone;
+            u.Address = data.Address;
+            u.Role = data.Role;
+            u.IsActive = data.IsActive;
             await _context.SaveChangesAsync();
-            return Ok(user);
+            return Ok(u);
         }
 
         [HttpPatch("{id}/toggle")]
         public async Task<IActionResult> Toggle(int id)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound();
-
-            user.IsActive = !user.IsActive;
+            var u = await _context.Users.FindAsync(id);
+            if (u == null) return NotFound();
+            u.IsActive = !u.IsActive;
             await _context.SaveChangesAsync();
-
-            return Ok(new { id = user.UserId, isActive = user.IsActive });
+            return Ok(new { id = u.UserId, isActive = u.IsActive });
         }
     }
 

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace FlowerShop.Data;
 
@@ -9,15 +7,15 @@ public partial class FlowerContext : DbContext
     public FlowerContext() { }
     public FlowerContext(DbContextOptions<FlowerContext> options) : base(options) { }
 
-    public virtual DbSet<Banner> Banners { get; set; }
-    public virtual DbSet<Category> Categories { get; set; }
-    public virtual DbSet<Contact> Contacts { get; set; }
-    public virtual DbSet<Order> Orders { get; set; }
-    public virtual DbSet<OrderDetail> OrderDetails { get; set; }
-    public virtual DbSet<Product> Products { get; set; }
-    public virtual DbSet<Review> Reviews { get; set; }
-    public virtual DbSet<User> Users { get; set; }
-
+    public DbSet<Banner> Banners { get; set; }
+    public DbSet<Category> Categories { get; set; }
+    public DbSet<Contact> Contacts { get; set; }
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<OrderDetail> OrderDetails { get; set; }
+    public DbSet<Product> Products { get; set; }
+    public DbSet<ProductImage> ProductImages { get; set; }
+    public DbSet<Review> Reviews { get; set; }
+    public DbSet<User> Users { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,8 +59,8 @@ public partial class FlowerContext : DbContext
         modelBuilder.Entity<Order>(entity =>
         {
             entity.HasKey(e => e.OrderId);
-            entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Chờ xử lý");
+            entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Cho xu ly");
             entity.Property(e => e.ReceiverName).HasMaxLength(100);
             entity.Property(e => e.ReceiverPhone).HasMaxLength(15);
             entity.Property(e => e.ReceiverAddress).HasMaxLength(500);
@@ -75,8 +73,8 @@ public partial class FlowerContext : DbContext
         modelBuilder.Entity<OrderDetail>(entity =>
         {
             entity.HasKey(e => e.OrderDetailId);
-            entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.Subtotal).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Subtotal).HasColumnType("decimal(18,2)");
             entity.HasOne(d => d.Order).WithMany(p => p.OrderDetails).HasForeignKey(d => d.OrderId);
             entity.HasOne(d => d.Product).WithMany(p => p.OrderDetails).HasForeignKey(d => d.ProductId);
         });
@@ -85,10 +83,10 @@ public partial class FlowerContext : DbContext
         {
             entity.HasKey(e => e.ProductId);
             entity.Property(e => e.ProductName).HasMaxLength(200);
-            entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.DiscountPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Price).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.DiscountPrice).HasColumnType("decimal(18,2)");
             entity.Property(e => e.ImageUrl).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.Rating).HasColumnType("decimal(3, 1)").HasDefaultValue(0m);
+            entity.Property(e => e.Rating).HasColumnType("decimal(3,1)").HasDefaultValue(0m);
             entity.Property(e => e.StockQuantity).HasDefaultValue(0);
             entity.Property(e => e.SoldQuantity).HasDefaultValue(0);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
@@ -96,6 +94,14 @@ public partial class FlowerContext : DbContext
             entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getdate())").HasColumnType("datetime");
             entity.Property(e => e.UpdatedDate).HasColumnType("datetime");
             entity.HasOne(d => d.Category).WithMany(p => p.Products).HasForeignKey(d => d.CategoryId);
+        });
+
+        modelBuilder.Entity<ProductImage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ImageUrl).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.IsMain).HasDefaultValue(false);
+            entity.HasOne(d => d.Product).WithMany(p => p.Images).HasForeignKey(d => d.ProductId);
         });
 
         modelBuilder.Entity<Review>(entity =>

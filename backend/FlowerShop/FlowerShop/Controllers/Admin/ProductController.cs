@@ -7,124 +7,176 @@ namespace FlowerShop.Controllers.Admin
 {
     [Route("api/admin/products")]
     [ApiController]
-    [Authorize(Roles = "Admin")] 
+    [Authorize(Roles = "Admin")]
     public class ProductController : ControllerBase
     {
         private readonly FlowerContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public ProductController(FlowerContext context)
+        public ProductController(FlowerContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
+
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] ProductParams filter)
+        public async Task<IActionResult> GetAll([FromQuery] ProductParams f)
         {
-            var query = _context.Products
-                .Include(p => p.Category) 
-                .AsQueryable();
+            var q = _context.Products.Include(p => p.Category).Include(p => p.Images).AsQueryable();
 
-            if (!string.IsNullOrEmpty(filter.Search))
-                query = query.Where(p => p.ProductName.Contains(filter.Search));
+            if (!string.IsNullOrEmpty(f.Search))
+                q = q.Where(p => p.ProductName.Contains(f.Search));
+            if (f.CategoryId.HasValue)
+                q = q.Where(p => p.CategoryId == f.CategoryId);
+            if (f.IsActive.HasValue)
+                q = q.Where(p => p.IsActive == f.IsActive);
+            if (f.IsFeatured.HasValue)
+                q = q.Where(p => p.IsFeatured == f.IsFeatured);
+            if (f.MinPrice.HasValue)
+                q = q.Where(p => p.Price >= f.MinPrice);
+            if (f.MaxPrice.HasValue)
+                q = q.Where(p => p.Price <= f.MaxPrice);
 
-            if (filter.CategoryId.HasValue)
-                query = query.Where(p => p.CategoryId == filter.CategoryId);
-
-            if (filter.IsActive.HasValue)
-                query = query.Where(p => p.IsActive == filter.IsActive);
-
-            if (filter.IsFeatured.HasValue)
-                query = query.Where(p => p.IsFeatured == filter.IsFeatured);
-
-            query = filter.SortBy switch
+            q = f.SortBy switch
             {
-                "price_asc" => query.OrderBy(p => p.Price),
-                "price_desc" => query.OrderByDescending(p => p.Price),
-                "sold" => query.OrderByDescending(p => p.SoldQuantity),
-                _ => query.OrderByDescending(p => p.CreatedDate)
+                "price_asc" => q.OrderBy(p => p.Price),
+                "price_desc" => q.OrderByDescending(p => p.Price),
+                "sold" => q.OrderByDescending(p => p.SoldQuantity),
+                _ => q.OrderByDescending(p => p.CreatedDate)
             };
 
-            var total = await query.CountAsync();
-            var items = await query
-                .Skip((filter.Page - 1) * filter.Limit)
-                .Take(filter.Limit)
-                .ToListAsync();
-
+            var total = await q.CountAsync();
+            var items = await q.Skip((f.Page - 1) * f.Limit).Take(f.Limit).ToListAsync();
             return Ok(new { total, items });
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var product = await _context.Products
-                .Include(p => p.Category)
-                .FirstOrDefaultAsync(p => p.ProductId == id);
-
-            if (product == null) return NotFound(new { message = "Không tìm thấy sản phẩm" });
-            return Ok(product);
+            var p = await _context.Products.Include(x => x.Category).Include(x => x.Images)
+                .FirstOrDefaultAsync(x => x.ProductId == id);
+            if (p == null) return NotFound();
+            return Ok(p);
         }
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Product product)
         {
-            product.CreatedDate = DateTime.Now; 
-            product.IsActive = product.IsActive ?? true; 
-            
+            product.CreatedDate = DateTime.Now;
+            product.IsActive = product.IsActive ?? true;
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetById), new { id = product.ProductId }, product);
+            return Ok(product);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] Product data)
         {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null) return NotFound();
+            var p = await _context.Products.FindAsync(id);
+            if (p == null) return NotFound();
 
-            product.ProductName = data.ProductName;
-            product.Description = data.Description; 
-            product.Price = data.Price; 
-            product.DiscountPrice = data.DiscountPrice; 
-            product.StockQuantity = data.StockQuantity; 
-            product.CategoryId = data.CategoryId; 
-            product.IsActive = data.IsActive; 
-            product.IsFeatured = data.IsFeatured; 
-            product.ImageUrl = data.ImageUrl; 
-            product.UpdatedDate = DateTime.Now; 
+            p.ProductName = data.ProductName;
+            p.Description = data.Description;
+            p.Price = data.Price;
+            p.DiscountPrice = data.DiscountPrice;
+            p.StockQuantity = data.StockQuantity;
+            p.CategoryId = data.CategoryId;
+            p.IsActive = data.IsActive;
+            p.IsFeatured = data.IsFeatured;
+            p.ImageUrl = data.ImageUrl;
+            p.UpdatedDate = DateTime.Now;
 
             await _context.SaveChangesAsync();
-            return Ok(product);
-        }
-
-        [HttpPatch("{id}/toggle")]
-        public async Task<IActionResult> Toggle(int id)
-        {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null) return NotFound();
-
-            product.IsActive = !product.IsActive;
-            await _context.SaveChangesAsync();
-
-            return Ok(new { id = product.ProductId, isActive = product.IsActive });
+            return Ok(p);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Remove(int id)
         {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null) return NotFound();
+            var p = await _context.Products.FindAsync(id);
+            if (p == null) return NotFound();
 
-            bool hasOrders = await _context.OrderDetails.AnyAsync(od => od.ProductId == id);
-            if (hasOrders)
+            if (await _context.OrderDetails.AnyAsync(od => od.ProductId == id))
             {
-                product.IsActive = false;
+                p.IsActive = false;
                 await _context.SaveChangesAsync();
-                return Ok(new { message = "Sản phẩm đã có đơn hàng nên chỉ thực hiện ẩn." });
+                return Ok(new { message = "San pham co don hang, da an." });
             }
 
-            _context.Products.Remove(product);
+            _context.ProductImages.RemoveRange(_context.ProductImages.Where(i => i.ProductId == id));
+            _context.Products.Remove(p);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Xóa sản phẩm thành công" });
+            return Ok(new { message = "Xoa thanh cong" });
+        }
+
+        [HttpPatch("{id}/toggle")]
+        public async Task<IActionResult> Toggle(int id)
+        {
+            var p = await _context.Products.FindAsync(id);
+            if (p == null) return NotFound();
+            p.IsActive = !p.IsActive;
+            await _context.SaveChangesAsync();
+            return Ok(new { id = p.ProductId, isActive = p.IsActive });
+        }
+
+        [HttpPost("{id}/images")]
+        public async Task<IActionResult> UploadImages(int id, [FromForm] List<IFormFile> files, [FromForm] int mainIndex)
+        {
+            var p = await _context.Products.FindAsync(id);
+            if (p == null) return NotFound();
+            if (files == null || files.Count == 0) return BadRequest("Khong co file");
+
+            var folder = Path.Combine(_env.WebRootPath, "uploads/products");
+            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+            for (int i = 0; i < files.Count; i++)
+            {
+                var fileName = Guid.NewGuid() + Path.GetExtension(files[i].FileName);
+                var path = Path.Combine(folder, fileName);
+                using var stream = new FileStream(path, FileMode.Create);
+                await files[i].CopyToAsync(stream);
+
+                var img = new ProductImage
+                {
+                    ProductId = id,
+                    ImageUrl = "/uploads/products/" + fileName,
+                    IsMain = (i == mainIndex)
+                };
+                _context.ProductImages.Add(img);
+
+                if (i == mainIndex) p.ImageUrl = img.ImageUrl;
+            }
+
+            await _context.SaveChangesAsync();
+            var images = await _context.ProductImages.Where(x => x.ProductId == id).ToListAsync();
+            return Ok(images);
+        }
+
+        [HttpDelete("{id}/images/{imageId}")]
+        public async Task<IActionResult> DeleteImage(int id, int imageId)
+        {
+            var img = await _context.ProductImages.FindAsync(imageId);
+            if (img == null || img.ProductId != id) return NotFound();
+            _context.ProductImages.Remove(img);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Xoa anh thanh cong" });
+        }
+
+        [HttpPatch("{id}/images/{imageId}/set-main")]
+        public async Task<IActionResult> SetMainImage(int id, int imageId)
+        {
+            var images = await _context.ProductImages.Where(x => x.ProductId == id).ToListAsync();
+            foreach (var img in images) img.IsMain = (img.Id == imageId);
+
+            var main = images.FirstOrDefault(x => x.Id == imageId);
+            if (main != null)
+            {
+                var p = await _context.Products.FindAsync(id);
+                if (p != null) p.ImageUrl = main.ImageUrl;
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(images);
         }
     }
 
@@ -136,6 +188,8 @@ namespace FlowerShop.Controllers.Admin
         public int? CategoryId { get; set; }
         public bool? IsActive { get; set; }
         public bool? IsFeatured { get; set; }
+        public decimal? MinPrice { get; set; }
+        public decimal? MaxPrice { get; set; }
         public string? SortBy { get; set; }
     }
 }

@@ -44,9 +44,6 @@ export const categoryAPI = {
   update: (id, data) => api.put(`admin/categories/${id}`, data),
   remove: (id) => api.delete(`admin/categories/${id}`),
   toggle: (id) => api.patch(`admin/categories/${id}/toggle`),
-  uploadImage: (id, formData) => api.post(`admin/categories/${id}/image`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
 };
 
 export const productAPI = {
@@ -56,9 +53,11 @@ export const productAPI = {
   update: (id, data) => api.put(`admin/products/${id}`, data),
   remove: (id) => api.delete(`admin/products/${id}`),
   toggle: (id) => api.patch(`admin/products/${id}/toggle`),
-  uploadImage: (id, formData) => api.post(`admin/products/${id}/image`, formData, {
+  uploadImages: (id, formData) => api.post(`admin/products/${id}/images`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  deleteImage: (id, imageId) => api.delete(`admin/products/${id}/images/${imageId}`),
+  setMainImage: (id, imageId) => api.patch(`admin/products/${id}/images/${imageId}/set-main`),
 };
 
 export const orderAPI = {
@@ -77,12 +76,11 @@ export const userAPI = {
 
 export const reviewAPI = {
   getAll: (params) => api.get('admin/reviews', { params }),
-  getById: (id) => api.get(`admin/reviews/${id}`),
   remove: (id) => api.delete(`admin/reviews/${id}`),
 };
 
 export const bannerAPI = {
-  getAll: () => api.get('admin/banners'),
+  getAll: (params) => api.get('admin/banners', { params }),
   getById: (id) => api.get(`admin/banners/${id}`),
   create: (data) => api.post('admin/banners', data),
   update: (id, data) => api.put(`admin/banners/${id}`, data),

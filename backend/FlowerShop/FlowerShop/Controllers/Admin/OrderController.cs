@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace FlowerShop.Controllers.Admin
 {
-    [Route("api/admin/orders")] 
+    [Route("api/admin/orders")]
     [ApiController]
-    [Authorize(Roles = "Admin")] 
+    [Authorize(Roles = "Admin")]
     public class OrderController : ControllerBase
     {
         private readonly FlowerContext _context;
@@ -18,29 +18,24 @@ namespace FlowerShop.Controllers.Admin
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] OrderSearchParams filter)
+        public async Task<IActionResult> GetAll([FromQuery] OrderSearchParams f)
         {
-            var query = _context.Orders
-                .Include(o => o.User) 
-                .AsQueryable();
+            var q = _context.Orders.Include(o => o.User).AsQueryable();
 
-            if (!string.IsNullOrEmpty(filter.Status))
-                query = query.Where(o => o.Status == filter.Status);
+            if (!string.IsNullOrEmpty(f.Status))
+                q = q.Where(o => o.Status == f.Status);
+            if (!string.IsNullOrEmpty(f.Search))
+                q = q.Where(o => o.ReceiverName.Contains(f.Search) || o.ReceiverPhone.Contains(f.Search));
+            if (f.FromDate.HasValue)
+                q = q.Where(o => o.OrderDate >= f.FromDate);
+            if (f.ToDate.HasValue)
+                q = q.Where(o => o.OrderDate <= f.ToDate);
+            if (!string.IsNullOrEmpty(f.PaymentMethod))
+                q = q.Where(o => o.PaymentMethod == f.PaymentMethod);
 
-            if (!string.IsNullOrEmpty(filter.Search))
-                query = query.Where(o => o.ReceiverName.Contains(filter.Search) || o.ReceiverPhone.Contains(filter.Search));
-
-            if (filter.FromDate.HasValue)
-                query = query.Where(o => o.OrderDate >= filter.FromDate);
-            if (filter.ToDate.HasValue)
-                query = query.Where(o => o.OrderDate <= filter.ToDate);
-
-            var total = await query.CountAsync();
-            var items = await query
-                .OrderByDescending(o => o.OrderDate)
-                .Skip((filter.Page - 1) * filter.Limit)
-                .Take(filter.Limit)
-                .ToListAsync();
+            var total = await q.CountAsync();
+            var items = await q.OrderByDescending(o => o.OrderDate)
+                .Skip((f.Page - 1) * f.Limit).Take(f.Limit).ToListAsync();
 
             return Ok(new { total, items });
         }
@@ -50,11 +45,9 @@ namespace FlowerShop.Controllers.Admin
         {
             var order = await _context.Orders
                 .Include(o => o.User)
-                .Include(o => o.OrderDetails) 
-                    .ThenInclude(od => od.Product) 
+                .Include(o => o.OrderDetails).ThenInclude(od => od.Product)
                 .FirstOrDefaultAsync(o => o.OrderId == id);
-
-            if (order == null) return NotFound(new { message = "Không tìm thấy đơn hàng" });
+            if (order == null) return NotFound();
             return Ok(order);
         }
 
@@ -63,26 +56,34 @@ namespace FlowerShop.Controllers.Admin
         {
             var order = await _context.Orders.FindAsync(id);
             if (order == null) return NotFound();
-
             order.Status = data.Status;
             await _context.SaveChangesAsync();
-
             return Ok(new { success = true, status = order.Status });
         }
 
         [HttpPatch("{id}/cancel")]
         public async Task<IActionResult> CancelOrder(int id, [FromBody] CancelRequestDto data)
         {
-            var order = await _context.Orders.FindAsync(id);
+            var order = await _context.Orders.Include(o => o.OrderDetails).FirstOrDefaultAsync(o => o.OrderId == id);
             if (order == null) return NotFound();
 
-            order.Status = "Đã hủy"; 
+            order.Status = "Da huy";
             order.Note = string.IsNullOrEmpty(order.Note)
-                ? $"Lý do hủy: {data.Reason}"
-                : $"{order.Note} | Lý do hủy: {data.Reason}"; 
+                ? "Ly do huy: " + data.Reason
+                : order.Note + " | Ly do huy: " + data.Reason;
+
+            foreach (var detail in order.OrderDetails)
+            {
+                var product = await _context.Products.FindAsync(detail.ProductId);
+                if (product != null)
+                {
+                    product.StockQuantity = (product.StockQuantity ?? 0) + detail.Quantity;
+                    product.SoldQuantity = (product.SoldQuantity ?? 0) - detail.Quantity;
+                }
+            }
 
             await _context.SaveChangesAsync();
-            return Ok(new { success = true, message = "Đã hủy đơn hàng" });
+            return Ok(new { success = true });
         }
     }
 
@@ -94,15 +95,9 @@ namespace FlowerShop.Controllers.Admin
         public string? Search { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+        public string? PaymentMethod { get; set; }
     }
 
-    public class StatusUpdateDto
-    {
-        public string Status { get; set; }
-    }
-
-    public class CancelRequestDto
-    {
-        public string Reason { get; set; }
-    }
+    public class StatusUpdateDto { public string Status { get; set; } = ""; }
+    public class CancelRequestDto { public string Reason { get; set; } = ""; }
 }

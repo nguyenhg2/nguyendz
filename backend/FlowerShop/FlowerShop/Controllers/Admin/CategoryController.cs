@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace FlowerShop.Controllers.Admin
 {
-    [Route("api/admin/categories")] 
+    [Route("api/admin/categories")]
     [ApiController]
-    [Authorize(Roles = "Admin")] 
+    [Authorize(Roles = "Admin")]
     public class CategoryController : ControllerBase
     {
         private readonly FlowerContext _context;
@@ -18,79 +18,74 @@ namespace FlowerShop.Controllers.Admin
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
+        public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] bool? isActive,
+            [FromQuery] int page = 1, [FromQuery] int limit = 20)
         {
-            var query = _context.Categories.AsQueryable();
+            var q = _context.Categories.AsQueryable();
 
-            if (!includeInactive)
-            {
-                query = query.Where(c => c.IsActive == true);
-            }
+            if (!string.IsNullOrEmpty(search))
+                q = q.Where(c => c.CategoryName.Contains(search));
+            if (isActive.HasValue)
+                q = q.Where(c => c.IsActive == isActive);
 
-            var categories = await query
-                .OrderBy(c => c.SortOrder) 
-                .ToListAsync();
+            var total = await q.CountAsync();
+            var items = await q.OrderBy(c => c.SortOrder)
+                .Skip((page - 1) * limit).Take(limit).ToListAsync();
 
-            return Ok(categories);
+            return Ok(new { total, items });
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null) return NotFound(new { message = "Không tìm thấy danh mục" });
-            return Ok(category);
+            var c = await _context.Categories.FindAsync(id);
+            if (c == null) return NotFound();
+            return Ok(c);
         }
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Category category)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
-            category.CreatedDate = DateTime.Now; 
+            category.CreatedDate = DateTime.Now;
             _context.Categories.Add(category);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetById), new { id = category.CategoryId }, category);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] Category categoryData)
-        {
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null) return NotFound();
-
-            category.CategoryName = categoryData.CategoryName;
-            category.Description = categoryData.Description;
-            category.ImageUrl = categoryData.ImageUrl;
-            category.SortOrder = categoryData.SortOrder;
-            category.IsActive = categoryData.IsActive;
-
             await _context.SaveChangesAsync();
             return Ok(category);
         }
 
-        [HttpPatch("{id}/toggle")]
-        public async Task<IActionResult> Toggle(int id)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] Category data)
         {
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null) return NotFound();
+            var c = await _context.Categories.FindAsync(id);
+            if (c == null) return NotFound();
 
-            category.IsActive = !category.IsActive; 
+            c.CategoryName = data.CategoryName;
+            c.Description = data.Description;
+            c.ImageUrl = data.ImageUrl;
+            c.SortOrder = data.SortOrder;
+            c.IsActive = data.IsActive;
+
             await _context.SaveChangesAsync();
-
-            return Ok(new { id = category.CategoryId, isActive = category.IsActive });
+            return Ok(c);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Remove(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null) return NotFound();
-            category.IsActive = false;
+            var c = await _context.Categories.FindAsync(id);
+            if (c == null) return NotFound();
+            c.IsActive = false;
             await _context.SaveChangesAsync();
+            return Ok(new { message = "Da an danh muc" });
+        }
 
-            return Ok(new { message = "Đã ẩn danh mục thành công" });
+        [HttpPatch("{id}/toggle")]
+        public async Task<IActionResult> Toggle(int id)
+        {
+            var c = await _context.Categories.FindAsync(id);
+            if (c == null) return NotFound();
+            c.IsActive = !c.IsActive;
+            await _context.SaveChangesAsync();
+            return Ok(new { id = c.CategoryId, isActive = c.IsActive });
         }
     }
 }

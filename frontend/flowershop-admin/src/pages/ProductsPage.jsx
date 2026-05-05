@@ -4,81 +4,87 @@ import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
 
-const fmt    = n => new Intl.NumberFormat('vi-VN').format(n || 0);
-const fmtVND = n => fmt(n) + 'đ';
-const EMPTY_FORM = { ProductName: '', Description: '', Price: '', DiscountPrice: '', ImageUrl: '', CategoryId: '', StockQuantity: 0, IsFeatured: false, IsActive: true };
+const fmtVND = n => new Intl.NumberFormat('vi-VN').format(n || 0) + 'đ';
 
 export default function ProductsPage() {
   const { addToast } = useAdmin();
-  const [list,     setList]     = useState([]);
-  const [cats,     setCats]     = useState([]);
-  const [total,    setTotal]    = useState(0);
-  const [page,     setPage]     = useState(1);
-  const [loading,  setLoading]  = useState(true);
-  const [search,   setSearch]   = useState('');
-  const [catFilter,setCatFilter]= useState('');
-  const [modal,    setModal]    = useState(false);
-  const [form,     setForm]     = useState(EMPTY_FORM);
-  const [editId,   setEditId]   = useState(null);
-  const [confirm,  setConfirm]  = useState(null);
-  const [saving,   setSaving]   = useState(false);
-  const [imgFile,  setImgFile]  = useState(null);
-  const LIMIT = 12;
+  const [list, setList] = useState([]);
+  const [cats, setCats] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [catFilter, setCatFilter] = useState('');
+  const [activeFilter, setActiveFilter] = useState('');
+  const [featuredFilter, setFeaturedFilter] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [sortBy, setSortBy] = useState('');
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({});
+  const [editId, setEditId] = useState(null);
+  const [confirm, setConfirm] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [imgFiles, setImgFiles] = useState([]);
+  const [mainIdx, setMainIdx] = useState(0);
+  const LIMIT = 10;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await productAPI.getAll({ page, limit: LIMIT, search: search || undefined, categoryId: catFilter || undefined });
-      setList(res.data?.items || res.data || []);
-      setTotal(res.data?.total || (res.data?.length ?? 0));
+      const params = { page, limit: LIMIT };
+      if (search) params.search = search;
+      if (catFilter) params.categoryId = catFilter;
+      if (activeFilter !== '') params.isActive = activeFilter === 'true';
+      if (featuredFilter !== '') params.isFeatured = featuredFilter === 'true';
+      if (minPrice) params.minPrice = minPrice;
+      if (maxPrice) params.maxPrice = maxPrice;
+      if (sortBy) params.sortBy = sortBy;
+      const res = await productAPI.getAll(params);
+      setList(res.data.items || []);
+      setTotal(res.data.total || 0);
     } catch { addToast('Lỗi tải sản phẩm', 'error'); }
     finally { setLoading(false); }
-  }, [page, search, catFilter, addToast]);
+  }, [page, search, catFilter, activeFilter, featuredFilter, minPrice, maxPrice, sortBy]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { categoryAPI.getAll({ limit: 100 }).then(r => setCats(r.data.items || r.data || [])); }, []);
 
-  useEffect(() => {
-    categoryAPI.getAll().then(r => setCats(r.data || [])).catch(() => {});
-  }, []);
+  const resetFilter = () => { setSearch(''); setCatFilter(''); setActiveFilter(''); setFeaturedFilter(''); setMinPrice(''); setMaxPrice(''); setSortBy(''); setPage(1); };
 
-  const openAdd  = () => { setForm(EMPTY_FORM); setEditId(null); setImgFile(null); setModal(true); };
-  const openEdit = (p) => {
-    setForm({ ProductName: p.productName, Description: p.description || '', Price: p.price, DiscountPrice: p.discountPrice || '', ImageUrl: p.imageUrl || '', CategoryId: p.categoryId || '', StockQuantity: p.stockQuantity || 0, IsFeatured: !!p.isFeatured, IsActive: !!p.isActive });
-    setEditId(p.productId); setImgFile(null); setModal(true);
+  const openAdd = () => {
+    setForm({ productName: '', description: '', price: '', discountPrice: '', imageUrl: '', categoryId: '', stockQuantity: 0, isFeatured: false, isActive: true });
+    setEditId(null); setImgFiles([]); setMainIdx(0); setModal(true);
   };
-  const close = () => setModal(false);
-  const setF  = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const openEdit = (p) => {
+    setForm({ productName: p.productName, description: p.description || '', price: p.price, discountPrice: p.discountPrice || '', imageUrl: p.imageUrl || '', categoryId: p.categoryId || '', stockQuantity: p.stockQuantity || 0, isFeatured: !!p.isFeatured, isActive: !!p.isActive });
+    setEditId(p.productId); setImgFiles([]); setMainIdx(0); setModal(true);
+  };
 
   const handleSave = async () => {
-    if (!form.ProductName.trim() || !form.Price || !form.CategoryId) { addToast('Vui lòng điền đủ thông tin bắt buộc', 'error'); return; }
+    if (!form.productName || !form.price || !form.categoryId) { addToast('Điền đầy đủ thông tin bắt buộc', 'error'); return; }
     setSaving(true);
     try {
-      let savedId = editId;
-      const payload = { ...form, Price: parseFloat(form.Price), DiscountPrice: form.DiscountPrice ? parseFloat(form.DiscountPrice) : null };
-      if (editId) {
-        await productAPI.update(editId, payload);
-      } else {
-        const res = await productAPI.create(payload);
-        savedId = res.data?.ProductId;
+      const payload = { ...form, price: parseFloat(form.price), discountPrice: form.discountPrice ? parseFloat(form.discountPrice) : null, stockQuantity: parseInt(form.stockQuantity) || 0 };
+      let id = editId;
+      if (editId) { await productAPI.update(editId, payload); }
+      else { const res = await productAPI.create(payload); id = res.data.productId; }
+      if (imgFiles.length > 0 && id) {
+        const fd = new FormData();
+        imgFiles.forEach(f => fd.append('files', f));
+        fd.append('mainIndex', mainIdx);
+        await productAPI.uploadImages(id, fd);
       }
-      if (imgFile && savedId) {
-        const fd = new FormData(); fd.append('image', imgFile);
-        await productAPI.uploadImage(savedId, fd);
-      }
-      addToast(editId ? 'Cập nhật sản phẩm thành công' : 'Thêm sản phẩm thành công');
-      close(); load();
-    } catch (e) { addToast(e?.response?.data?.message || 'Lỗi lưu sản phẩm', 'error'); }
+      addToast(editId ? 'Cập nhật thành công' : 'Thêm thành công');
+      setModal(false); load();
+    } catch { addToast('Lỗi lưu sản phẩm', 'error'); }
     finally { setSaving(false); }
   };
 
-  const handleToggle = async (p) => {
-    try { await productAPI.toggle(p.ProductId); addToast(`Đã ${p.IsActive ? 'ẩn' : 'hiện'} sản phẩm`); load(); }
-    catch { addToast('Lỗi cập nhật', 'error'); }
-  };
-
   const handleDelete = async () => {
-    try { await productAPI.remove(confirm); addToast('Đã xóa sản phẩm'); setConfirm(null); load(); }
-    catch { addToast('Lỗi xóa sản phẩm', 'error'); }
+    try { await productAPI.remove(confirm); addToast('Đã xóa'); setConfirm(null); load(); }
+    catch { addToast('Lỗi xóa', 'error'); }
   };
 
   return (
@@ -91,16 +97,31 @@ export default function ProductsPage() {
         <button className="btn btn-primary" onClick={openAdd}>+ Thêm sản phẩm</button>
       </div>
 
-      {/* Filters */}
-      <div className="filters-bar">
-        <div className="search-box" style={{ flex: 1, maxWidth: 340 }}>
-          <span className="search-icon">🔍</span>
-          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Tìm tên sản phẩm..."/>
-        </div>
-        <select value={catFilter} onChange={e => { setCatFilter(e.target.value); setPage(1); }} style={{ width: 200 }}>
+      <div className="filters-bar" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Tìm tên sản phẩm..." style={{ width: 200 }}/>
+        <select value={catFilter} onChange={e => { setCatFilter(e.target.value); setPage(1); }} style={{ width: 160 }}>
           <option value="">Tất cả danh mục</option>
-          {cats.map(c => <option key={c.CategoryId} value={c.CategoryId}>{c.CategoryName}</option>)}
+          {cats.map(c => <option key={c.categoryId} value={c.categoryId}>{c.categoryName}</option>)}
         </select>
+        <select value={activeFilter} onChange={e => { setActiveFilter(e.target.value); setPage(1); }} style={{ width: 130 }}>
+          <option value="">Trạng thái</option>
+          <option value="true">Đang hiện</option>
+          <option value="false">Đã ẩn</option>
+        </select>
+        <select value={featuredFilter} onChange={e => { setFeaturedFilter(e.target.value); setPage(1); }} style={{ width: 130 }}>
+          <option value="">Nổi bật</option>
+          <option value="true">Có</option>
+          <option value="false">Không</option>
+        </select>
+        <input type="number" value={minPrice} onChange={e => { setMinPrice(e.target.value); setPage(1); }} placeholder="Giá từ" style={{ width: 100 }}/>
+        <input type="number" value={maxPrice} onChange={e => { setMaxPrice(e.target.value); setPage(1); }} placeholder="Giá đến" style={{ width: 100 }}/>
+        <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} style={{ width: 140 }}>
+          <option value="">Sắp xếp</option>
+          <option value="price_asc">Giá tăng</option>
+          <option value="price_desc">Giá giảm</option>
+          <option value="sold">Bán chạy</option>
+        </select>
+        <button className="btn btn-secondary" onClick={resetFilter}>Xóa bộ lọc</button>
       </div>
 
       <div className="card">
@@ -108,38 +129,34 @@ export default function ProductsPage() {
           {loading ? <div className="spinner"/> : (
             <table>
               <thead>
-                <tr><th>ID</th><th>Sản phẩm</th><th>Danh mục</th><th>Giá gốc</th><th>Giá KM</th><th>Tồn kho</th><th>Đã bán</th><th>Nổi bật</th><th>Hiển thị</th><th>Thao tác</th></tr>
+                <tr><th>ID</th><th>Sản phẩm</th><th>Danh mục</th><th>Giá</th><th>Giá KM</th><th>Tồn kho</th><th>Đã bán</th><th>Trạng thái</th><th>Thao tác</th></tr>
               </thead>
               <tbody>
-                {list.length === 0 && <tr><td colSpan={10}><div className="empty-state"><div className="empty-icon">🌸</div><p>Không tìm thấy sản phẩm</p></div></td></tr>}
+                {list.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40 }}>Không tìm thấy sản phẩm</td></tr>}
                 {list.map(p => (
                   <tr key={p.productId}>
-                    <td style={{ color: 'var(--muted)', fontWeight: 600 }}>#{p.productId}</td>
+                    <td>#{p.productId}</td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        {p.imageUrl ? <img src={p.imageUrl} alt="" className="img-preview"/> : <div className="img-preview">🌸</div>}
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: 13 }}>{p.productName}</div>
-                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>ID: {p.productId}</div>
-                        </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {p.imageUrl && <img src={p.imageUrl} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }}/>}
+                        <span style={{ fontWeight: 600 }}>{p.productName}</span>
                       </div>
                     </td>
-                    <td style={{ fontSize: 12 }}>{cats.find(c => c.categoryId === p.categoryId)?.categoryName || '—'}</td>
-                    <td style={{ fontWeight: 600 }}>{fmtVND(p.price)}</td>
-                    <td style={{ color: 'var(--primary)', fontWeight: 700 }}>{p.discountPrice ? fmtVND(p.discountPrice) : '—'}</td>
-                    <td style={{ textAlign: 'center' }}>{fmt(p.stockQuantity)}</td>
-                    <td style={{ textAlign: 'center' }}>{fmt(p.soldQuantity)}</td>
-                    <td style={{ textAlign: 'center' }}>{p.isFeatured ? '⭐' : '—'}</td>
+                    <td>{p.category?.categoryName || '-'}</td>
+                    <td>{fmtVND(p.price)}</td>
+                    <td>{p.discountPrice ? fmtVND(p.discountPrice) : '-'}</td>
+                    <td>{p.stockQuantity}</td>
+                    <td>{p.soldQuantity}</td>
                     <td>
                       <label className="switch">
-                        <input type="checkbox" checked={!!p.isActive} onChange={() => handleToggle(p)}/>
+                        <input type="checkbox" checked={!!p.isActive} onChange={() => productAPI.toggle(p.productId).then(load)}/>
                         <span className="slider"/>
                       </label>
                     </td>
                     <td>
                       <div className="btn-group">
-                        <button className="btn btn-info btn-sm" onClick={() => openEdit(p)}>✏️</button>
-                        <button className="btn btn-danger btn-sm" onClick={() => setConfirm(p.productId)}>🗑️</button>
+                        <button className="btn btn-info btn-sm" onClick={() => openEdit(p)}>Sửa</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => setConfirm(p.productId)}>Xóa</button>
                       </div>
                     </td>
                   </tr>
@@ -148,77 +165,64 @@ export default function ProductsPage() {
             </table>
           )}
         </div>
-        <div style={{ padding: '12px 0' }}>
-          <Pagination current={page} total={Math.ceil(total / LIMIT)} onChange={setPage}/>
-        </div>
+        <Pagination current={page} total={Math.ceil(total / LIMIT)} onChange={setPage}/>
       </div>
 
-      {/* Product Form Modal */}
       {modal && (
-        <div className="modal-backdrop" onClick={close}>
+        <div className="modal-backdrop" onClick={() => setModal(false)}>
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editId ? '✏️ Sửa sản phẩm' : '➕ Thêm sản phẩm mới'}</h3>
-              <button className="modal-close" onClick={close}>✕</button>
+              <h3>{editId ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</h3>
+              <button className="modal-close" onClick={() => setModal(false)}>X</button>
             </div>
             <div className="modal-body">
-              <div className="form-row form-row-2" style={{ marginBottom: 14 }}>
-                <div className="form-group">
-                  <label>Tên sản phẩm *</label>
-                  <input value={form.productName} onChange={e => setF('productName', e.target.value)} placeholder="VD: Bó hoa hồng đỏ 20 bông"/>
-                </div>
-                <div className="form-group">
-                  <label>Danh mục *</label>
-                  <select value={form.categoryId} onChange={e => setF('categoryId', e.target.value)}>
-                    <option value="">-- Chọn danh mục --</option>
+              <div className="form-group"><label>Tên sản phẩm *</label>
+                <input value={form.productName} onChange={e => setForm({...form, productName: e.target.value})}/>
+              </div>
+              <div className="form-row form-row-2">
+                <div className="form-group"><label>Danh mục *</label>
+                  <select value={form.categoryId} onChange={e => setForm({...form, categoryId: e.target.value})}>
+                    <option value="">-- Chọn --</option>
                     {cats.map(c => <option key={c.categoryId} value={c.categoryId}>{c.categoryName}</option>)}
                   </select>
                 </div>
-              </div>
-              <div className="form-row form-row-3" style={{ marginBottom: 14 }}>
-                <div className="form-group">
-                  <label>Giá gốc (Price) *</label>
-                  <input type="number" value={form.price} onChange={e => setF('price', e.target.value)} placeholder="450000"/>
-                </div>
-                <div className="form-group">
-                  <label>Giá khuyến mãi (DiscountPrice)</label>
-                  <input type="number" value={form.discountPrice} onChange={e => setF('discountPrice', e.target.value)} placeholder="Để trống nếu không KM"/>
-                </div>
-                <div className="form-group">
-                  <label>Tồn kho (StockQuantity)</label>
-                  <input type="number" value={form.stockQuantity} onChange={e => setF('stockQuantity', +e.target.value)} placeholder="0"/>
+                <div className="form-group"><label>Tồn kho</label>
+                  <input type="number" value={form.stockQuantity} onChange={e => setForm({...form, stockQuantity: e.target.value})}/>
                 </div>
               </div>
-              <div className="form-group" style={{ marginBottom: 14 }}>
-                <label>Mô tả (Description)</label>
-                <textarea rows={4} value={form.description} onChange={e => setF('description', e.target.value)} placeholder="Mô tả chi tiết sản phẩm..."/>
-              </div>
-              <div className="form-row form-row-2" style={{ marginBottom: 14 }}>
-                <div className="form-group">
-                  <label>URL ảnh (ImageUrl)</label>
-                  <input value={form.imageUrl} onChange={e => setF('imageUrl', e.target.value)} placeholder="https://..."/>
+              <div className="form-row form-row-2">
+                <div className="form-group"><label>Giá *</label>
+                  <input type="number" value={form.price} onChange={e => setForm({...form, price: e.target.value})}/>
                 </div>
-                <div className="form-group">
-                  <label>Upload ảnh mới</label>
-                  <input type="file" accept="image/*" onChange={e => setImgFile(e.target.files[0])}/>
+                <div className="form-group"><label>Giá khuyến mãi</label>
+                  <input type="number" value={form.discountPrice} onChange={e => setForm({...form, discountPrice: e.target.value})}/>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 24 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
-                  <input type="checkbox" checked={!!form.IsFeatured} onChange={e => setF('IsFeatured', e.target.checked)} style={{ width: 'auto' }}/>
-                  ⭐ Sản phẩm nổi bật (IsFeatured)
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
-                  <input type="checkbox" checked={!!form.IsActive} onChange={e => setF('IsActive', e.target.checked)} style={{ width: 'auto' }}/>
-                  👁️ Hiển thị (IsActive)
-                </label>
+              <div className="form-group"><label>Mô tả</label>
+                <textarea rows={3} value={form.description} onChange={e => setForm({...form, description: e.target.value})}/>
+              </div>
+              <div className="form-group">
+                <label>Upload ảnh (chọn nhiều file, click để chọn ảnh chính)</label>
+                <input type="file" accept="image/*" multiple onChange={e => { setImgFiles([...e.target.files]); setMainIdx(0); }}/>
+                {imgFiles.length > 0 && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                    {imgFiles.map((f, i) => (
+                      <div key={i} onClick={() => setMainIdx(i)} style={{ border: i === mainIdx ? '3px solid blue' : '1px solid #ccc', borderRadius: 4, cursor: 'pointer', padding: 2 }}>
+                        <img src={URL.createObjectURL(f)} alt="" style={{ width: 60, height: 60, objectFit: 'cover' }}/>
+                        {i === mainIdx && <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700 }}>Ảnh chính</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <label><input type="checkbox" checked={!!form.isFeatured} onChange={e => setForm({...form, isFeatured: e.target.checked})}/> Nổi bật</label>
+                <label><input type="checkbox" checked={!!form.isActive} onChange={e => setForm({...form, isActive: e.target.checked})}/> Hiển thị</label>
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={close}>Hủy</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-                {saving ? '⏳ Đang lưu...' : (editId ? '💾 Cập nhật' : '➕ Thêm mới')}
-              </button>
+              <button className="btn btn-secondary" onClick={() => setModal(false)}>Hủy</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu'}</button>
             </div>
           </div>
         </div>
