@@ -24,7 +24,7 @@ namespace FlowerShop.Controllers.User
         [Authorize]
         public async Task<IActionResult> GetMe()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userIdClaim = User.FindFirst("nameid") ?? User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null) return Unauthorized();
             var userId = int.Parse(userIdClaim.Value);
             var user = await _context.Users.FindAsync(userId);
