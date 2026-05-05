@@ -563,3 +563,4 @@ D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\obj\Debug\net10.
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\obj\Debug\net10.0\FlowerShop.pdb
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\obj\Debug\net10.0\FlowerShop.genruntimeconfig.cache
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\obj\Debug\net10.0\ref\FlowerShop.dll
+D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt
