@@ -18,7 +18,7 @@ export function AdminProvider({ children }) {
     authAPI.me()
       .then(res => {
         const user = res.data;
-        if (user && user.Role === 'Admin') {
+        if (user && user.role === 'Admin') {
           setAdmin(user);
           setPage('dashboard');
         } else {

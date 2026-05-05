@@ -18,14 +18,14 @@ export default function LoginPage() {
     try {
       const res = await authAPI.login(form);
       const { token, user } = res.data;
-      if (user.Role !== 'Admin') {
+      if (user.role !== 'Admin') {
         setError('Tài khoản không có quyền truy cập trang quản trị');
         setLoading(false);
         return;
       }
       localStorage.setItem('admin_token', token);
       setAdmin(user);
-      addToast(`Chào mừng, ${user.FullName}!`);
+      addToast(`Chào mừng, ${user.fullName}!`);
       navigate('dashboard');
     } catch (err) {
       setError(err?.response?.data?.message || 'Email hoặc mật khẩu không đúng');
