@@ -1,11 +1,37 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { authAPI } from '../services/api';
 
 const AdminContext = createContext();
 
 export function AdminProvider({ children }) {
-  const [admin, setAdmin]   = useState(null);   // logged-in admin user
-  const [page, setPage]     = useState('login'); // current page
+  const [admin, setAdmin] = useState(null);
+  const [page, setPage] = useState('dashboard');
   const [toasts, setToasts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    authAPI.me()
+      .then(res => {
+        const user = res.data;
+        if (user && user.Role === 'Admin') {
+          setAdmin(user);
+          setPage('dashboard');
+        } else {
+          localStorage.removeItem('admin_token');
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('admin_token');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
   const navigate = useCallback((p) => setPage(p), []);
 
@@ -18,20 +44,24 @@ export function AdminProvider({ children }) {
   const logout = useCallback(() => {
     localStorage.removeItem('admin_token');
     setAdmin(null);
-    setPage('login');
+    setPage('dashboard');
   }, []);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        Đang tải...
+      </div>
+    );
+  }
 
   return (
     <AdminContext.Provider value={{ admin, setAdmin, page, navigate, addToast, logout }}>
       {children}
-      {/* Toast container */}
       {toasts.length > 0 && (
         <div className="toast">
           {toasts.map(t => (
-            <div key={t.id} className={`toast-item toast-${t.type}`}>
-              <span>{t.type === 'success' ? '✅' : '❌'}</span>
-              {t.msg}
-            </div>
+            <div key={t.id} className={`toast-item toast-${t.type}`}>{t.msg}</div>
           ))}
         </div>
       )}

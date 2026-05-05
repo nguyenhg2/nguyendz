@@ -53,11 +53,7 @@
             },
             {
               "$type": "Bookmark",
-              "Name": "ST:61:0:{e8034f19-ab72-4f06-83fd-f6832b41aa63}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:60:0:{e8034f19-ab72-4f06-83fd-f6832b41aa63}"
+              "Name": "ST:70:0:{e8034f19-ab72-4f06-83fd-f6832b41aa63}"
             }
           ]
         },
@@ -75,11 +71,11 @@
             },
             {
               "$type": "Bookmark",
-              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+              "Name": "ST:0:0:{eefa5220-e298-11d0-8f78-00a0c9110057}"
             },
             {
               "$type": "Bookmark",
-              "Name": "ST:0:0:{eefa5220-e298-11d0-8f78-00a0c9110057}"
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
             }
           ]
         },

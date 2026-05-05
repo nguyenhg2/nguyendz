@@ -5,8 +5,9 @@
     "\\backend\\FlowerShop",
     "\\backend\\FlowerShop\\FlowerShop",
     "\\backend\\FlowerShop\\FlowerShop\\Controllers",
+    "\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin",
     "\\backend\\FlowerShop\\FlowerShop\\Controllers\\User"
   ],
-  "SelectedNode": "\\backend\\FlowerShop\\FlowerShop",
+  "SelectedNode": "\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin\\ProductController.cs",
   "PreviewInSolutionExplorer": false
 }

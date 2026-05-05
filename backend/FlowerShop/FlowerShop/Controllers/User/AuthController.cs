@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using FlowerShop.Data;
-using FlowerShop.Common; 
+using FlowerShop.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace FlowerShop.Controllers.User
 {
@@ -18,6 +20,18 @@ namespace FlowerShop.Controllers.User
             _configuration = configuration;
         }
 
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> GetMe()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+            var userId = int.Parse(userIdClaim.Value);
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return Unauthorized();
+            return Ok(new { user.FullName, user.Email, user.Role, user.Phone, user.Address });
+        }
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
@@ -26,14 +40,13 @@ namespace FlowerShop.Controllers.User
 
             byte[] salt;
             string hashedPwd = TokenHelper.HashPassword(request.Password, out salt);
-
             string storedPassword = Convert.ToBase64String(salt) + "." + hashedPwd;
 
             var newUser = new FlowerShop.Data.User
             {
                 Email = request.Email,
                 FullName = request.FullName,
-                PasswordHash = storedPassword, 
+                PasswordHash = storedPassword,
                 Phone = request.Phone,
                 Role = "Customer",
                 CreatedDate = DateTime.Now,
@@ -42,7 +55,6 @@ namespace FlowerShop.Controllers.User
 
             _context.Users.Add(newUser);
             await _context.SaveChangesAsync();
-
             return Ok(new { success = true, message = "Đăng ký thành công!" });
         }
 
@@ -50,7 +62,6 @@ namespace FlowerShop.Controllers.User
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-
             if (user == null)
                 return Unauthorized(new { message = "Email hoặc mật khẩu không chính xác" });
 
