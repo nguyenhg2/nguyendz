@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { authAPI } from '../services/api';
 
 const AdminContext = createContext();
@@ -8,19 +8,21 @@ export function AdminProvider({ children }) {
   const [page, setPage] = useState('dashboard');
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const initialized = useRef(false);
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
     const token = localStorage.getItem('admin_token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    if (!token) { setLoading(false); return; }
+
     authAPI.me()
       .then(res => {
         const user = res.data;
-        if (user && user.role === 'Admin') {
+        const role = user.role || user.Role;
+        if (user && role === 'Admin') {
           setAdmin(user);
-          setPage('dashboard');
         } else {
           localStorage.removeItem('admin_token');
         }

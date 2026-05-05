@@ -15,9 +15,12 @@ api.interceptors.request.use(cfg => {
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401 && !err.config.url.includes('/auth/me')) {
-      localStorage.removeItem('admin_token');
-      window.location.href = '/';
+    if (err.response?.status === 401) {
+      const url = err.config?.url || '';
+      if (!url.includes('/auth/me') && !url.includes('/auth/login')) {
+        localStorage.removeItem('admin_token');
+        window.location.reload();
+      }
     }
     return Promise.reject(err);
   }
