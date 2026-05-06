@@ -18,7 +18,7 @@ api.interceptors.request.use(cfg => {
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401 && !err.config.url.includes('/auth/me')) {
+    if (err.response?.status === 401 && err.config.url?.includes('/auth/me')) {
       localStorage.removeItem('admin_token');
       window.location.href = '/';
     }
