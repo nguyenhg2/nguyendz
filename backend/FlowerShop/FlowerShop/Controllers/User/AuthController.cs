@@ -59,7 +59,7 @@ namespace FlowerShop.Controllers.User
             if (!TokenHelper.IsValidPassword(request.Password, salt, parts[1]))
                 return Unauthorized(new { message = "Email hoac mat khau khong dung" });
 
-            string secretKey = _configuration["Jwt:Key"] ?? "Chuoi_Secret_Key_Sieu_Bao_Mat_Cua_Ban_123";
+            string secretKey = _configuration["Jwt:Key"] ?? "Chuoi_Secret_Key_Mac_Dinh_Sieu_Bao_Mat_123";
             string token = TokenHelper.GenerateToken(secretKey, 480, user.UserId.ToString(), user.FullName, user.Role);
 
             return Ok(new

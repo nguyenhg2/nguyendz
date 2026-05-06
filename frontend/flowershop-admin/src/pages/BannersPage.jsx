@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { bannerAPI } from '../services/api';
+import { bannerAPI, IMG_URL } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
+
+const imgSrc = (url) => { if (!url) return ''; if (url.startsWith('http')) return url; return IMG_URL + url; };
+const LIMIT = 10;
 
 export default function BannersPage() {
   const { addToast } = useAdmin();
@@ -13,12 +16,11 @@ export default function BannersPage() {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ title: '', imageUrl: '', linkUrl: '', sortOrder: 0, isActive: true });
+  const [form, setForm] = useState({});
   const [editId, setEditId] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [imgFile, setImgFile] = useState(null);
-  const LIMIT = 10;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -27,33 +29,46 @@ export default function BannersPage() {
       if (search) params.search = search;
       if (activeFilter !== '') params.isActive = activeFilter === 'true';
       const res = await bannerAPI.getAll(params);
-      setList(res.data.items || res.data || []);
-      setTotal(res.data.total || res.data.length || 0);
+      const data = res.data;
+      setList(data.items || data || []);
+      setTotal(data.total || (data.length ? data.length : 0));
     } catch { addToast('Lỗi tải banner', 'error'); }
     finally { setLoading(false); }
   }, [page, search, activeFilter]);
 
   useEffect(() => { load(); }, [load]);
 
-  const openAdd = () => { setForm({ title: '', imageUrl: '', linkUrl: '', sortOrder: 0, isActive: true }); setEditId(null); setImgFile(null); setModal(true); };
-  const openEdit = (b) => { setForm({ title: b.title || '', imageUrl: b.imageUrl || '', linkUrl: b.linkUrl || '', sortOrder: b.sortOrder || 0, isActive: !!b.isActive }); setEditId(b.bannerId); setImgFile(null); setModal(true); };
+  const openAdd = () => {
+    setForm({ title: '', linkUrl: '', imageUrl: '', sortOrder: 0, isActive: true });
+    setEditId(null); setImgFile(null); setModal(true);
+  };
+
+  const openEdit = (b) => {
+    setForm({ title: b.title || '', linkUrl: b.linkUrl || '', imageUrl: b.imageUrl || '', sortOrder: b.sortOrder || 0, isActive: !!b.isActive });
+    setEditId(b.bannerId); setImgFile(null); setModal(true);
+  };
 
   const handleSave = async () => {
+    if (!form.title) { addToast('Vui lòng nhập tiêu đề', 'error'); return; }
     setSaving(true);
     try {
       let id = editId;
-      if (editId) await bannerAPI.update(editId, form);
+      if (editId) { await bannerAPI.update(editId, form); }
       else { const res = await bannerAPI.create(form); id = res.data.bannerId; }
-      if (imgFile && id) { const fd = new FormData(); fd.append('file', imgFile); await bannerAPI.uploadImage(id, fd); }
+      if (imgFile && id) {
+        const fd = new FormData();
+        fd.append('file', imgFile);
+        await bannerAPI.uploadImage(id, fd);
+      }
       addToast(editId ? 'Cập nhật thành công' : 'Thêm thành công');
       setModal(false); load();
-    } catch { addToast('Lỗi', 'error'); }
+    } catch { addToast('Lỗi lưu banner', 'error'); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
-    try { await bannerAPI.remove(confirm); addToast('Đã xóa'); setConfirm(null); load(); }
-    catch { addToast('Lỗi', 'error'); }
+    try { await bannerAPI.remove(confirm); addToast('Đã xóa banner'); setConfirm(null); load(); }
+    catch { addToast('Lỗi xóa', 'error'); }
   };
 
   return (
@@ -69,7 +84,7 @@ export default function BannersPage() {
       <div className="filters-bar" style={{ gap: 8 }}>
         <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Tìm tiêu đề..." style={{ width: 200 }}/>
         <select value={activeFilter} onChange={e => { setActiveFilter(e.target.value); setPage(1); }} style={{ width: 140 }}>
-          <option value="">Tất cả</option>
+          <option value="">Tất cả trạng thái</option>
           <option value="true">Đang hiện</option>
           <option value="false">Đã ẩn</option>
         </select>
@@ -79,14 +94,15 @@ export default function BannersPage() {
         <div className="tbl-wrapper">
           {loading ? <div className="spinner"/> : (
             <table>
-              <thead><tr><th>ID</th><th>Ảnh</th><th>Tiêu đề</th><th>Thứ tự</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+              <thead><tr><th>ID</th><th>Ảnh</th><th>Tiêu đề</th><th>Link</th><th>Thứ tự</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
               <tbody>
-                {list.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40 }}>Không có banner</td></tr>}
+                {list.length === 0 && <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40 }}>Không có banner</td></tr>}
                 {list.map(b => (
                   <tr key={b.bannerId}>
                     <td>#{b.bannerId}</td>
-                    <td>{b.imageUrl && <img src={b.imageUrl} alt="" style={{ width: 80, height: 40, objectFit: 'cover', borderRadius: 4 }}/>}</td>
-                    <td style={{ fontWeight: 600 }}>{b.title || '-'}</td>
+                    <td>{b.imageUrl && <img src={imgSrc(b.imageUrl)} alt="" style={{ width: 80, height: 40, objectFit: 'cover', borderRadius: 4 }}/>}</td>
+                    <td style={{ fontWeight: 600 }}>{b.title}</td>
+                    <td>{b.linkUrl || '-'}</td>
                     <td>{b.sortOrder}</td>
                     <td>
                       <label className="switch">
@@ -112,16 +128,16 @@ export default function BannersPage() {
       {modal && (
         <div className="modal-backdrop" onClick={() => setModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editId ? 'Sửa banner' : 'Thêm banner'}</h3>
-              <button className="modal-close" onClick={() => setModal(false)}>X</button>
-            </div>
+            <div className="modal-header"><h3>{editId ? 'Sửa banner' : 'Thêm banner'}</h3><button className="modal-close" onClick={() => setModal(false)}>X</button></div>
             <div className="modal-body">
-              <div className="form-group"><label>Tiêu đề</label><input value={form.title} onChange={e => setForm({...form, title: e.target.value})}/></div>
+              <div className="form-group"><label>Tiêu đề *</label><input value={form.title} onChange={e => setForm({...form, title: e.target.value})}/></div>
               <div className="form-group"><label>Link URL</label><input value={form.linkUrl} onChange={e => setForm({...form, linkUrl: e.target.value})}/></div>
-              <div className="form-group"><label>URL ảnh</label><input value={form.imageUrl} onChange={e => setForm({...form, imageUrl: e.target.value})}/></div>
-              <div className="form-group"><label>Upload ảnh</label><input type="file" accept="image/*" onChange={e => setImgFile(e.target.files[0])}/></div>
-              <div className="form-group"><label>Thứ tự</label><input type="number" value={form.sortOrder} onChange={e => setForm({...form, sortOrder: +e.target.value})}/></div>
+              <div className="form-group"><label>Thứ tự</label><input type="number" value={form.sortOrder} onChange={e => setForm({...form, sortOrder: parseInt(e.target.value) || 0})}/></div>
+              <div className="form-group">
+                <label>Tải ảnh lên</label>
+                <input type="file" accept="image/*" onChange={e => setImgFile(e.target.files[0])}/>
+                {imgFile && <img src={URL.createObjectURL(imgFile)} alt="" style={{ width: 120, marginTop: 8, borderRadius: 4 }}/>}
+              </div>
               <label><input type="checkbox" checked={!!form.isActive} onChange={e => setForm({...form, isActive: e.target.checked})}/> Hiển thị</label>
             </div>
             <div className="modal-footer">
@@ -132,7 +148,7 @@ export default function BannersPage() {
         </div>
       )}
 
-      {confirm && <ConfirmModal title="Xóa banner" message="Bạn có chắc muốn xóa?" onConfirm={handleDelete} onCancel={() => setConfirm(null)}/>}
+      {confirm && <ConfirmModal title="Xóa banner" message="Bạn có chắc chắn muốn xóa banner này?" onConfirm={handleDelete} onCancel={() => setConfirm(null)}/>}
     </div>
   );
 }

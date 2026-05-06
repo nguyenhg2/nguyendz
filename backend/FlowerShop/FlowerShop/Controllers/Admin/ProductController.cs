@@ -103,7 +103,14 @@ namespace FlowerShop.Controllers.Admin
                 return Ok(new { message = "San pham co don hang, da an." });
             }
 
-            _context.ProductImages.RemoveRange(_context.ProductImages.Where(i => i.ProductId == id));
+            var images = await _context.ProductImages.Where(i => i.ProductId == id).ToListAsync();
+            foreach (var img in images)
+            {
+                DeleteFile(img.ImageUrl);
+            }
+            DeleteFile(p.ImageUrl);
+
+            _context.ProductImages.RemoveRange(images);
             _context.Products.Remove(p);
             await _context.SaveChangesAsync();
             return Ok(new { message = "Xoa thanh cong" });
@@ -157,6 +164,9 @@ namespace FlowerShop.Controllers.Admin
         {
             var img = await _context.ProductImages.FindAsync(imageId);
             if (img == null || img.ProductId != id) return NotFound();
+
+            DeleteFile(img.ImageUrl);
+
             _context.ProductImages.Remove(img);
             await _context.SaveChangesAsync();
             return Ok(new { message = "Xoa anh thanh cong" });
@@ -177,6 +187,13 @@ namespace FlowerShop.Controllers.Admin
 
             await _context.SaveChangesAsync();
             return Ok(images);
+        }
+
+        private void DeleteFile(string? url)
+        {
+            if (string.IsNullOrEmpty(url) || url.StartsWith("http")) return;
+            var path = Path.Combine(_env.WebRootPath, url.TrimStart('/'));
+            if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
         }
     }
 

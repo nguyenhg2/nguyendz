@@ -4,6 +4,9 @@ import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
 
+const fmtDate = d => d ? new Date(d).toLocaleDateString('vi-VN') : '-';
+const LIMIT = 10;
+
 export default function ContactsPage() {
   const { addToast } = useAdmin();
   const [list, setList] = useState([]);
@@ -14,32 +17,34 @@ export default function ContactsPage() {
   const [readFilter, setReadFilter] = useState('');
   const [detail, setDetail] = useState(null);
   const [confirm, setConfirm] = useState(null);
-  const LIMIT = 15;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const params = { page, limit: LIMIT };
       if (search) params.search = search;
-      if (readFilter === 'true') params.isRead = true;
-      if (readFilter === 'false') params.isRead = false;
+      if (readFilter !== '') params.isRead = readFilter === 'true';
       const res = await contactAPI.getAll(params);
-      setList(res.data.items || res.data || []);
-      setTotal(res.data.total || res.data.length || 0);
+      const data = res.data;
+      setList(data.items || data || []);
+      setTotal(data.total || (data.length ? data.length : 0));
     } catch { addToast('Lỗi tải liên hệ', 'error'); }
     finally { setLoading(false); }
   }, [page, search, readFilter]);
 
   useEffect(() => { load(); }, [load]);
 
-  const openDetail = async (c) => {
-    setDetail(c);
-    if (!c.isRead) { try { await contactAPI.markRead(c.contactId); load(); } catch {} }
+  const openDetail = async (id) => {
+    try {
+      const res = await contactAPI.getById(id);
+      setDetail(res.data);
+      load();
+    } catch { addToast('Lỗi tải chi tiết', 'error'); }
   };
 
   const handleDelete = async () => {
-    try { await contactAPI.remove(confirm); addToast('Đã xóa'); setConfirm(null); setDetail(null); load(); }
-    catch { addToast('Lỗi', 'error'); }
+    try { await contactAPI.remove(confirm); addToast('Đã xóa liên hệ'); setConfirm(null); load(); }
+    catch { addToast('Lỗi xóa', 'error'); }
   };
 
   return (
@@ -52,7 +57,7 @@ export default function ContactsPage() {
       </div>
 
       <div className="filters-bar" style={{ gap: 8 }}>
-        <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Tìm tên, email, chủ đề..." style={{ width: 240 }}/>
+        <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Tìm tên, email, chủ đề..." style={{ width: 220 }}/>
         <select value={readFilter} onChange={e => { setReadFilter(e.target.value); setPage(1); }} style={{ width: 140 }}>
           <option value="">Tất cả</option>
           <option value="false">Chưa đọc</option>
@@ -64,19 +69,23 @@ export default function ContactsPage() {
         <div className="tbl-wrapper">
           {loading ? <div className="spinner"/> : (
             <table>
-              <thead><tr><th>ID</th><th>Họ tên</th><th>Email</th><th>Chủ đề</th><th>Ngày gửi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+              <thead><tr><th>ID</th><th>Họ tên</th><th>Email</th><th>SĐT</th><th>Chủ đề</th><th>Ngày gửi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
               <tbody>
-                {list.length === 0 && <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40 }}>Không có liên hệ</td></tr>}
+                {list.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40 }}>Không có liên hệ</td></tr>}
                 {list.map(c => (
-                  <tr key={c.contactId} style={{ cursor: 'pointer', fontWeight: c.isRead ? 400 : 700 }} onClick={() => openDetail(c)}>
+                  <tr key={c.contactId} style={{ fontWeight: c.isRead ? 400 : 600 }}>
                     <td>#{c.contactId}</td>
                     <td>{c.fullName}</td>
                     <td>{c.email}</td>
+                    <td>{c.phone || '-'}</td>
                     <td>{c.subject || '-'}</td>
-                    <td>{new Date(c.createdDate).toLocaleDateString('vi-VN')}</td>
-                    <td><span className="badge">{c.isRead ? 'Đã đọc' : 'Chưa đọc'}</span></td>
-                    <td onClick={e => e.stopPropagation()}>
-                      <button className="btn btn-danger btn-sm" onClick={() => setConfirm(c.contactId)}>Xóa</button>
+                    <td>{fmtDate(c.createdDate)}</td>
+                    <td><span className={`badge ${c.isRead ? 'badge-success' : 'badge-warning'}`}>{c.isRead ? 'Đã đọc' : 'Chưa đọc'}</span></td>
+                    <td>
+                      <div className="btn-group">
+                        <button className="btn btn-info btn-sm" onClick={() => openDetail(c.contactId)}>Xem</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => setConfirm(c.contactId)}>Xóa</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -90,27 +99,21 @@ export default function ContactsPage() {
       {detail && (
         <div className="modal-backdrop" onClick={() => setDetail(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Liên hệ #{detail.contactId}</h3>
-              <button className="modal-close" onClick={() => setDetail(null)}>X</button>
-            </div>
+            <div className="modal-header"><h3>Chi tiết liên hệ</h3><button className="modal-close" onClick={() => setDetail(null)}>X</button></div>
             <div className="modal-body">
               <p><strong>Họ tên:</strong> {detail.fullName}</p>
               <p><strong>Email:</strong> {detail.email}</p>
-              <p><strong>SĐT:</strong> {detail.phone || '-'}</p>
-              <p><strong>Chủ đề:</strong> {detail.subject || '-'}</p>
+              <p><strong>SĐT:</strong> {detail.phone || 'Không có'}</p>
+              <p><strong>Chủ đề:</strong> {detail.subject || 'Không có'}</p>
+              <p><strong>Ngày gửi:</strong> {fmtDate(detail.createdDate)}</p>
               <p><strong>Nội dung:</strong></p>
-              <div style={{ background: '#f5f5f5', padding: 12, borderRadius: 8, whiteSpace: 'pre-wrap' }}>{detail.message || '-'}</div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setDetail(null)}>Đóng</button>
-              <button className="btn btn-danger" onClick={() => setConfirm(detail.contactId)}>Xóa</button>
+              <div style={{ background: '#f9fafb', padding: 12, borderRadius: 8, whiteSpace: 'pre-wrap' }}>{detail.message || 'Không có nội dung'}</div>
             </div>
           </div>
         </div>
       )}
 
-      {confirm && <ConfirmModal title="Xóa liên hệ" message="Bạn có chắc muốn xóa?" onConfirm={handleDelete} onCancel={() => setConfirm(null)}/>}
+      {confirm && <ConfirmModal title="Xóa liên hệ" message="Bạn có chắc chắn muốn xóa tin nhắn này?" onConfirm={handleDelete} onCancel={() => setConfirm(null)}/>}
     </div>
   );
 }
