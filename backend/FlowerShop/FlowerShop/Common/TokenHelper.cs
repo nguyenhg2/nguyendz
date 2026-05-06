@@ -68,7 +68,11 @@ namespace FlowerShop.Common
                 {
                     new Claim(ClaimTypes.Name, userName),
                     new Claim(ClaimTypes.NameIdentifier, userId),
-                    new Claim(ClaimTypes.Role, roles)
+                    new Claim(ClaimTypes.Role, roles),
+                    new Claim(JwtRegisteredClaimNames.Sub, userId),
+                    new Claim(JwtRegisteredClaimNames.UniqueName, userName),
+                    new Claim("nameid", userId),
+                    new Claim("role", roles)
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(minuteExpireTime),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

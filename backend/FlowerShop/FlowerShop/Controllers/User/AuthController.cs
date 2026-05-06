@@ -24,7 +24,9 @@ namespace FlowerShop.Controllers.User
         [Authorize]
         public async Task<IActionResult> GetMe()
         {
-            var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)
+                ?? User.FindFirst("nameid")
+                ?? User.FindFirst("sub");
             if (claim == null) return Unauthorized();
             if (!int.TryParse(claim.Value, out int userId)) return Unauthorized();
 
@@ -60,7 +62,7 @@ namespace FlowerShop.Controllers.User
                 return Unauthorized(new { message = "Email hoac mat khau khong dung" });
 
             string secretKey = _configuration["Jwt:Key"] ?? "Chuoi_Secret_Key_Mac_Dinh_Sieu_Bao_Mat_123";
-            string token = TokenHelper.GenerateToken(secretKey, 480, user.UserId.ToString(), user.FullName, user.Role);
+            string token = TokenHelper.GenerateToken(secretKey, 480, user.UserId.ToString(), user.FullName, user.Role ?? "Customer");
 
             return Ok(new
             {
