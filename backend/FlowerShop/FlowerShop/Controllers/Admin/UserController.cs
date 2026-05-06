@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
+using FlowerShop.Common;
 using Microsoft.AspNetCore.Authorization;
 
 namespace FlowerShop.Controllers.Admin
@@ -20,10 +21,14 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] UserSearchParams f)
         {
-            var q = _context.Users.AsQueryable();
+            var paging = PagingHelper.Normalize(f.Page, f.Limit);
+            var q = _context.Users.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrEmpty(f.Search))
-                q = q.Where(u => u.FullName.Contains(f.Search) || u.Email.Contains(f.Search) || u.Phone.Contains(f.Search));
+                q = q.Where(u =>
+                    u.FullName.Contains(f.Search)
+                    || u.Email.Contains(f.Search)
+                    || (u.Phone ?? "").Contains(f.Search));
             if (!string.IsNullOrEmpty(f.Role))
                 q = q.Where(u => u.Role == f.Role);
             if (f.IsActive.HasValue)
@@ -31,7 +36,7 @@ namespace FlowerShop.Controllers.Admin
 
             var total = await q.CountAsync();
             var items = await q.OrderByDescending(u => u.CreatedDate)
-                .Skip((f.Page - 1) * f.Limit).Take(f.Limit).ToListAsync();
+                .Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit).ToListAsync();
 
             return Ok(new { total, items });
         }
@@ -39,7 +44,7 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var u = await _context.Users.Include(x => x.Orders).FirstOrDefaultAsync(x => x.UserId == id);
+            var u = await _context.Users.AsNoTracking().Include(x => x.Orders).FirstOrDefaultAsync(x => x.UserId == id);
             if (u == null) return NotFound();
             u.PasswordHash = "";
             return Ok(u);

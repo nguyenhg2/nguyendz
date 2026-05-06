@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
+using FlowerShop.Common;
 using Microsoft.AspNetCore.Authorization;
 
 namespace FlowerShop.Controllers.Admin
@@ -21,7 +22,9 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] bool? isActive,
             [FromQuery] int page = 1, [FromQuery] int limit = 20)
         {
-            var q = _context.Categories.AsQueryable();
+            (page, limit) = PagingHelper.Normalize(page, limit, defaultLimit: 20);
+
+            var q = _context.Categories.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrEmpty(search))
                 q = q.Where(c => c.CategoryName.Contains(search));
@@ -38,7 +41,7 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var c = await _context.Categories.FindAsync(id);
+            var c = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(x => x.CategoryId == id);
             if (c == null) return NotFound();
             return Ok(c);
         }
@@ -46,6 +49,10 @@ namespace FlowerShop.Controllers.Admin
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Category category)
         {
+            var error = ValidateCategory(category);
+            if (error != null) return BadRequest(new { message = error });
+
+            category.CategoryName = category.CategoryName.Trim();
             category.CreatedDate = DateTime.Now;
             _context.Categories.Add(category);
             await _context.SaveChangesAsync();
@@ -58,7 +65,10 @@ namespace FlowerShop.Controllers.Admin
             var c = await _context.Categories.FindAsync(id);
             if (c == null) return NotFound();
 
-            c.CategoryName = data.CategoryName;
+            var error = ValidateCategory(data);
+            if (error != null) return BadRequest(new { message = error });
+
+            c.CategoryName = data.CategoryName.Trim();
             c.Description = data.Description;
             c.ImageUrl = data.ImageUrl;
             c.SortOrder = data.SortOrder;
@@ -75,7 +85,7 @@ namespace FlowerShop.Controllers.Admin
             if (c == null) return NotFound();
             c.IsActive = false;
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Da an danh muc" });
+            return Ok(new { message = "Đã ẩn danh mục" });
         }
 
         [HttpPatch("{id}/toggle")]
@@ -86,6 +96,14 @@ namespace FlowerShop.Controllers.Admin
             c.IsActive = !c.IsActive;
             await _context.SaveChangesAsync();
             return Ok(new { id = c.CategoryId, isActive = c.IsActive });
+        }
+
+        private static string? ValidateCategory(Category category)
+        {
+            if (string.IsNullOrWhiteSpace(category.CategoryName))
+                return "Tên danh mục không được để trống";
+
+            return null;
         }
     }
 }

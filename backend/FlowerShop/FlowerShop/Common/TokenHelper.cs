@@ -22,7 +22,7 @@ namespace FlowerShop.Common
                 IPrincipal principal = tokenHandler.ValidateToken(authToken, validationParameters, out validatedToken);
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
                 return false;
             }

@@ -2,10 +2,18 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { authAPI } from '../services/api';
 
 const AdminContext = createContext();
+const PAGE_KEYS = ['dashboard', 'categories', 'products', 'orders', 'customers', 'reviews', 'banners', 'contacts', 'reports'];
+
+const pageFromLocation = () => {
+  const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+  return PAGE_KEYS.includes(path) ? path : 'dashboard';
+};
+
+const pathForPage = (page) => `/${PAGE_KEYS.includes(page) ? page : 'dashboard'}`;
 
 export function AdminProvider({ children }) {
   const [admin, setAdmin] = useState(null);
-  const [page, setPage] = useState('dashboard');
+  const [page, setPage] = useState(pageFromLocation);
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
   const initialized = useRef(false);
@@ -35,7 +43,20 @@ export function AdminProvider({ children }) {
       });
   }, []);
 
-  const navigate = useCallback((p) => setPage(p), []);
+  useEffect(() => {
+    const onPopState = () => setPage(pageFromLocation());
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigate = useCallback((p) => {
+    const nextPage = PAGE_KEYS.includes(p) ? p : 'dashboard';
+    setPage(nextPage);
+    const nextPath = pathForPage(nextPage);
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, '', nextPath);
+    }
+  }, []);
 
   const addToast = useCallback((msg, type = 'success') => {
     const id = Date.now();
@@ -47,6 +68,7 @@ export function AdminProvider({ children }) {
     localStorage.removeItem('admin_token');
     setAdmin(null);
     setPage('dashboard');
+    window.history.pushState({}, '', '/login');
   }, []);
 
   if (loading) {

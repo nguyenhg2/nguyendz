@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
+using FlowerShop.Common;
 using Microsoft.AspNetCore.Authorization;
 
 namespace FlowerShop.Controllers.Admin
@@ -20,12 +21,15 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] OrderSearchParams f)
         {
-            var q = _context.Orders.Include(o => o.User).AsQueryable();
+            var paging = PagingHelper.Normalize(f.Page, f.Limit);
+            var q = _context.Orders.AsNoTracking().Include(o => o.User).AsQueryable();
 
             if (!string.IsNullOrEmpty(f.Status))
                 q = q.Where(o => o.Status == f.Status);
             if (!string.IsNullOrEmpty(f.Search))
-                q = q.Where(o => o.ReceiverName.Contains(f.Search) || o.ReceiverPhone.Contains(f.Search));
+                q = q.Where(o =>
+                    (o.ReceiverName ?? "").Contains(f.Search)
+                    || (o.ReceiverPhone ?? "").Contains(f.Search));
             if (f.FromDate.HasValue)
                 q = q.Where(o => o.OrderDate >= f.FromDate);
             if (f.ToDate.HasValue)
@@ -35,7 +39,7 @@ namespace FlowerShop.Controllers.Admin
 
             var total = await q.CountAsync();
             var items = await q.OrderByDescending(o => o.OrderDate)
-                .Skip((f.Page - 1) * f.Limit).Take(f.Limit).ToListAsync();
+                .Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit).ToListAsync();
 
             return Ok(new { total, items });
         }
@@ -44,6 +48,7 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetById(int id)
         {
             var order = await _context.Orders
+                .AsNoTracking()
                 .Include(o => o.User)
                 .Include(o => o.OrderDetails).ThenInclude(od => od.Product)
                 .FirstOrDefaultAsync(o => o.OrderId == id);
@@ -67,10 +72,10 @@ namespace FlowerShop.Controllers.Admin
             var order = await _context.Orders.Include(o => o.OrderDetails).FirstOrDefaultAsync(o => o.OrderId == id);
             if (order == null) return NotFound();
 
-            order.Status = "Da huy";
+            order.Status = "Đã hủy";
             order.Note = string.IsNullOrEmpty(order.Note)
-                ? "Ly do huy: " + data.Reason
-                : order.Note + " | Ly do huy: " + data.Reason;
+                ? "Lý do hủy: " + data.Reason
+                : order.Note + " | Lý do hủy: " + data.Reason;
 
             foreach (var detail in order.OrderDetails)
             {

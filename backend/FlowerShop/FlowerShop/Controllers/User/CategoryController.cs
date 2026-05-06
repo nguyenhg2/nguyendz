@@ -15,6 +15,7 @@ namespace FlowerShop.Controllers.Api
         public async Task<IActionResult> GetCategories()
         {
             var categories = await _context.Categories
+                .AsNoTracking()
                 .Where(c => c.IsActive == true)
                 .OrderBy(c => c.SortOrder)
                 .Select(c => new
@@ -33,7 +34,7 @@ namespace FlowerShop.Controllers.Api
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCategoryById(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.CategoryId == id);
             if (category == null) return NotFound(new { message = "Không tìm thấy danh mục" });
             return Ok(category);
         }

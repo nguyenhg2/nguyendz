@@ -21,14 +21,15 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetRevenueReport([FromQuery] int year, [FromQuery] int? month)
         {
             var query = _context.Orders
+                .AsNoTracking()
                 .Where(o => o.Status == "Hoàn thành" && o.OrderDate.HasValue && o.OrderDate.Value.Year == year);
 
             if (month.HasValue)
             {
-                query = query.Where(o => o.OrderDate.Value.Month == month.Value);
+                query = query.Where(o => o.OrderDate!.Value.Month == month.Value);
 
                 var dailyDataRaw = await query
-                    .GroupBy(o => o.OrderDate.Value.Day)
+                    .GroupBy(o => o.OrderDate!.Value.Day)
                     .Select(g => new {
                         Day = g.Key,
                         Value = g.Sum(o => o.TotalAmount ?? 0)
@@ -45,7 +46,7 @@ namespace FlowerShop.Controllers.Admin
             else
             {
                 var monthlyDataRaw = await query
-                    .GroupBy(o => o.OrderDate.Value.Month)
+                    .GroupBy(o => o.OrderDate!.Value.Month)
                     .Select(g => new {
                         Month = g.Key,
                         Value = g.Sum(o => o.TotalAmount ?? 0)
@@ -64,14 +65,18 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet("top-products")]
         public async Task<IActionResult> GetTopProductsReport([FromQuery] int limit = 10)
         {
+            if (limit < 1) limit = 10;
+            if (limit > 100) limit = 100;
+
             var topProducts = await _context.Products
+                .AsNoTracking()
                 .OrderByDescending(p => p.SoldQuantity)
                 .Take(limit)
                 .Select(p => new {
                     name = p.ProductName,
                     sold = p.SoldQuantity,
                     revenue = _context.OrderDetails
-                        .Where(od => od.ProductId == p.ProductId && od.Order.Status == "Hoàn thành")
+                        .Where(od => od.ProductId == p.ProductId && od.Order != null && od.Order.Status == "Hoàn thành")
                         .Sum(od => od.Subtotal ?? 0)
                 })
                 .ToListAsync();
@@ -83,6 +88,7 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetOrderStats()
         {
             var stats = await _context.Orders
+                .AsNoTracking()
                 .GroupBy(o => o.Status)
                 .Select(g => new {
                     status = g.Key ?? "Khác",

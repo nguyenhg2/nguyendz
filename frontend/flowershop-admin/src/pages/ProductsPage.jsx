@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { productAPI, categoryAPI, IMG_URL } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
@@ -32,7 +32,12 @@ export default function ProductsPage() {
   const [saving, setSaving] = useState(false);
   const [imgFiles, setImgFiles] = useState([]);
   const [mainIdx, setMainIdx] = useState(0);
+  const [existingImages, setExistingImages] = useState([]);
   const LIMIT = 10;
+  const filePreviews = useMemo(
+    () => imgFiles.map(file => ({ file, url: URL.createObjectURL(file) })),
+    [imgFiles]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,17 +59,48 @@ export default function ProductsPage() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { categoryAPI.getAll({ limit: 100 }).then(r => setCats(r.data.items || r.data || [])); }, []);
+  useEffect(() => () => filePreviews.forEach(p => URL.revokeObjectURL(p.url)), [filePreviews]);
 
   const resetFilter = () => { setSearch(''); setCatFilter(''); setActiveFilter(''); setFeaturedFilter(''); setMinPrice(''); setMaxPrice(''); setSortBy(''); setPage(1); };
 
   const openAdd = () => {
     setForm({ productName: '', description: '', price: '', discountPrice: '', categoryId: '', stockQuantity: 0, isFeatured: false, isActive: true });
-    setEditId(null); setImgFiles([]); setMainIdx(0); setModal(true);
+    setEditId(null); setImgFiles([]); setExistingImages([]); setMainIdx(0); setModal(true);
   };
 
-  const openEdit = (p) => {
+  const openEdit = async (p) => {
     setForm({ productName: p.productName, description: p.description || '', price: p.price, discountPrice: p.discountPrice || '', categoryId: p.categoryId || '', stockQuantity: p.stockQuantity || 0, isFeatured: !!p.isFeatured, isActive: !!p.isActive });
     setEditId(p.productId); setImgFiles([]); setMainIdx(0); setModal(true);
+    try {
+      const res = await productAPI.getById(p.productId);
+      setExistingImages(res.data.images || []);
+    } catch {
+      setExistingImages(p.images || []);
+    }
+  };
+
+  const setMainExistingImage = async (imageId) => {
+    if (!editId) return;
+    try {
+      const res = await productAPI.setMainImage(editId, imageId);
+      setExistingImages(res.data || []);
+      addToast('Da chon anh chinh');
+      load();
+    } catch {
+      addToast('Loi chon anh chinh', 'error');
+    }
+  };
+
+  const deleteExistingImage = async (imageId) => {
+    if (!editId) return;
+    try {
+      await productAPI.deleteImage(editId, imageId);
+      setExistingImages(images => images.filter(img => img.id !== imageId));
+      addToast('Da xoa anh');
+      load();
+    } catch {
+      addToast('Loi xoa anh', 'error');
+    }
   };
 
   const handleSave = async () => {
@@ -209,11 +245,30 @@ export default function ProductsPage() {
               <div className="form-group">
                 <label>Tải ảnh lên (chọn nhiều file, nhấn vào ảnh để chọn làm ảnh chính)</label>
                 <input type="file" accept="image/*" multiple onChange={e => { setImgFiles([...e.target.files]); setMainIdx(0); }}/>
+                {existingImages.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', marginBottom: 8 }}>Anh hien co</div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      {existingImages.map(img => (
+                        <div key={img.id} style={{ width: 86 }}>
+                          <button type="button" onClick={() => setMainExistingImage(img.id)}
+                            style={{ width: 86, height: 86, border: img.isMain ? '3px solid #be3455' : '1px solid #d1d5db', borderRadius: 8, background: '#fff', padding: 2, cursor: 'pointer', overflow: 'hidden' }}>
+                            <img src={imgSrc(img.imageUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}/>
+                          </button>
+                          <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 4 }}>
+                            <span style={{ flex: 1, fontSize: 10, fontWeight: 700, color: img.isMain ? '#be3455' : '#6b7280' }}>{img.isMain ? 'Anh chinh' : 'Chon chinh'}</span>
+                            <button type="button" className="btn btn-danger btn-sm" onClick={() => deleteExistingImage(img.id)} style={{ padding: '2px 6px', fontSize: 10 }}>Xoa</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {imgFiles.length > 0 && (
                   <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                    {imgFiles.map((f, i) => (
-                      <div key={i} onClick={() => setMainIdx(i)} style={{ border: i === mainIdx ? '3px solid #2563eb' : '1px solid #ccc', borderRadius: 4, cursor: 'pointer', padding: 2 }}>
-                        <img src={URL.createObjectURL(f)} alt="" style={{ width: 60, height: 60, objectFit: 'cover' }}/>
+                    {filePreviews.map((preview, i) => (
+                      <div key={preview.url} onClick={() => setMainIdx(i)} style={{ border: i === mainIdx ? '3px solid #2563eb' : '1px solid #ccc', borderRadius: 4, cursor: 'pointer', padding: 2 }}>
+                        <img src={preview.url} alt="" style={{ width: 60, height: 60, objectFit: 'contain' }}/>
                         {i === mainIdx && <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#2563eb' }}>Ảnh chính</div>}
                       </div>
                     ))}

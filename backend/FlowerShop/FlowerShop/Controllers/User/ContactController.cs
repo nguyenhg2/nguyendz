@@ -21,7 +21,7 @@ namespace FlowerShop.Controllers.User
                 || string.IsNullOrWhiteSpace(request.Email)
                 || string.IsNullOrWhiteSpace(request.Message))
             {
-                return BadRequest(new { message = "Vui long nhap day du thong tin bat buoc" });
+                return BadRequest(new { message = "Vui lòng nhập đầy đủ thông tin bắt buộc" });
             }
 
             var contact = new Contact

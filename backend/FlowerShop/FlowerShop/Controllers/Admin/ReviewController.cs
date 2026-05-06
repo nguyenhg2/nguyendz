@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
+using FlowerShop.Common;
 using Microsoft.AspNetCore.Authorization;
 
 namespace FlowerShop.Controllers.Admin
@@ -20,7 +21,8 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] ReviewSearchParams f)
         {
-            var q = _context.Reviews.Include(r => r.Product).Include(r => r.User).AsQueryable();
+            var paging = PagingHelper.Normalize(f.Page, f.Limit);
+            var q = _context.Reviews.AsNoTracking().Include(r => r.Product).Include(r => r.User).AsQueryable();
 
             if (f.ProductId.HasValue)
                 q = q.Where(r => r.ProductId == f.ProductId);
@@ -31,15 +33,17 @@ namespace FlowerShop.Controllers.Admin
             if (f.MaxRating.HasValue)
                 q = q.Where(r => r.Rating <= f.MaxRating);
             if (!string.IsNullOrEmpty(f.Search))
-                q = q.Where(r => r.Product.ProductName.Contains(f.Search) || r.User.FullName.Contains(f.Search));
+                q = q.Where(r =>
+                    (r.Product != null && r.Product.ProductName.Contains(f.Search))
+                    || (r.User != null && r.User.FullName.Contains(f.Search)));
 
             var total = await q.CountAsync();
             var items = await q.OrderByDescending(r => r.CreatedDate)
-                .Skip((f.Page - 1) * f.Limit).Take(f.Limit)
+                .Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit)
                 .Select(r => new {
                     r.ReviewId, r.ProductId, r.UserId, r.Rating, r.Comment, r.CreatedDate,
-                    productName = r.Product.ProductName,
-                    userName = r.User.FullName
+                    productName = r.Product != null ? r.Product.ProductName : "",
+                    userName = r.User != null ? r.User.FullName : ""
                 }).ToListAsync();
 
             return Ok(new { total, items });
@@ -52,7 +56,7 @@ namespace FlowerShop.Controllers.Admin
             if (r == null) return NotFound();
             _context.Reviews.Remove(r);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Xoa thanh cong" });
+            return Ok(new { message = "Xóa thành công" });
         }
     }
 

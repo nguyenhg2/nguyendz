@@ -15,6 +15,7 @@ namespace FlowerShop.Controllers.User
         public async Task<IActionResult> GetBanners()
         {
             var banners = await _context.Banners
+                .AsNoTracking()
                 .Where(b => b.IsActive == true)
                 .OrderBy(b => b.SortOrder)
                 .Select(b => new

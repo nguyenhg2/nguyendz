@@ -1,9 +1,16 @@
 import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
-import { getProductDetail, getProducts, submitReview as submitReviewApi, getCategories } from '../services/api'; //[cite: 1]
+import { IMG_URL, getProductDetail, getProducts, submitReview as submitReviewApi, getCategories } from '../services/api'; //[cite: 1]
 import ProductCard from '../components/ProductCard';
 import Stars from '../components/Stars';
 import { fmt } from '../components/fmt';
+
+const imageSrc = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return IMG_URL + url;
+  return '';
+};
 
 export function ProductDetailPage() {
   const { pageParams, navigate, addToCart, user, setShowLogin, showToast } = useContext(AppContext);
@@ -12,6 +19,7 @@ export function ProductDetailPage() {
   const [categories, setCategories] = useState([]);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState('');
   
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState('desc');
@@ -32,6 +40,7 @@ export function ProductDetailPage() {
         const productData = prodRes.data;
         setP(productData);
         setCategories(catRes.data);
+        setSelectedImage(productData.images?.[0]?.imageUrl || productData.imageUrl || '');
 
         const relatedRes = await getProducts({ cat: productData.cat || productData.categoryId });
         const relatedItems = relatedRes.data.items || relatedRes.data || [];
@@ -88,6 +97,9 @@ export function ProductDetailPage() {
 
   const discount = p.sale ? Math.round((1 - p.sale / p.price) * 100) : 0;
   const currentCat = categories.find(c => c.id === p.cat);
+  const galleryImages = (p.images?.length ? p.images : [{ id: 'main', imageUrl: p.imageUrl }])
+    .filter(x => x.imageUrl);
+  const mainImageSrc = imageSrc(selectedImage || p.imageUrl);
 
   return (
     <div className="page">
@@ -106,13 +118,44 @@ export function ProductDetailPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, marginBottom: 48 }}>
           {/* Hình ảnh sản phẩm */}
           <div>
-            <div style={{ background: 'var(--warm)', borderRadius: 20, aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100, overflow: 'hidden', border: '1px solid var(--border)' }}>
-              {p.imageUrl?.startsWith('http') ? (
-                <img src={p.imageUrl} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ background: '#fff', borderRadius: 20, aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100, overflow: 'hidden', border: '1px solid var(--border)' }}>
+              {mainImageSrc ? (
+                <img src={mainImageSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
               ) : (
                 p.img || '🌸'
               )}
             </div>
+            {galleryImages.length > 1 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 92px))', gap: 10, marginTop: 12, justifyContent: 'start' }}>
+                {galleryImages.map(img => {
+                  const thumbSrc = imageSrc(img.imageUrl);
+                  const active = img.imageUrl === (selectedImage || p.imageUrl);
+
+                  return (
+                    <button
+                      key={img.id || img.imageUrl}
+                      type="button"
+                      onClick={() => setSelectedImage(img.imageUrl)}
+                      style={{
+                        aspectRatio: '1',
+                        border: active ? '2px solid var(--rose)' : '1px solid var(--border)',
+                        borderRadius: 10,
+                        padding: 0,
+                        background: '#fff',
+                        overflow: 'hidden',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {thumbSrc ? (
+                        <img src={thumbSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
+                      ) : (
+                        <span style={{ fontSize: 24 }}>ðŸŒ¸</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Thông tin chi tiết */}

@@ -2,13 +2,22 @@ import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import Stars from './Stars';
 import { fmt } from './fmt';
+import { IMG_URL } from '../services/api';
+
+const imageSrc = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return IMG_URL + url;
+  return '';
+};
 
 export default function ProductCard({ p, horizontal }) {
   const { addToCart, navigate } = useContext(AppContext);
 
   const id = p.productId || p.id;
   const name = p.productName || p.name;
-  const img = p.imageUrl || p.img;
+  const img = p.imageUrl || p.images?.[0]?.imageUrl || p.img;
+  const src = imageSrc(img);
   const price = p.price || 0;
   const sale = p.sale || p.discountPrice || null;
   const currentPrice = sale || price;
@@ -16,8 +25,8 @@ export default function ProductCard({ p, horizontal }) {
   if (horizontal) return (
     <div className="card" style={{ display:'flex', gap:0, cursor:'pointer' }} onClick={() => navigate('product', { id })}>
       <div className="product-img" style={{ width:100, minWidth:100, fontSize:36, background:'var(--warm)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
-        {img?.startsWith('http') ? (
-          <img src={img} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {src ? (
+          <img src={src} alt={name} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
         ) : (
           img || '🌸'
         )}
@@ -38,9 +47,9 @@ export default function ProductCard({ p, horizontal }) {
     <div className="card" style={{ cursor:'pointer' }}>
       <div onClick={() => navigate('product', { id })}>
         <div className="product-img" style={{ position:'relative', overflow:'hidden', height:180, background:'var(--warm)' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%' }}>
-            {img?.startsWith('http') ? (
-              <img src={img} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', background:'#fff' }}>
+            {src ? (
+              <img src={src} alt={name} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
             ) : (
               <span style={{ fontSize: 70 }}>{img || '🌸'}</span>
             )}

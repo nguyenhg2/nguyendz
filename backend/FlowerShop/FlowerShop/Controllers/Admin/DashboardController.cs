@@ -56,6 +56,7 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetRecentOrders()
         {
             var orders = await _context.Orders
+                .AsNoTracking()
                 .Include(o => o.User)
                 .OrderByDescending(o => o.OrderDate)
                 .Take(10)
@@ -64,7 +65,7 @@ namespace FlowerShop.Controllers.Admin
                     o.OrderDate,
                     o.TotalAmount,
                     o.Status,
-                    CustomerName = o.ReceiverName ?? o.User.FullName 
+                    CustomerName = o.ReceiverName ?? (o.User != null ? o.User.FullName : "")
                 })
                 .ToListAsync();
 
@@ -85,6 +86,7 @@ namespace FlowerShop.Controllers.Admin
             {
                 var revenue = await _context.Orders
                     .Where(o => o.Status == "Hoàn thành" &&
+                                o.OrderDate.HasValue &&
                                 o.OrderDate.Value.Year == m.Year &&
                                 o.OrderDate.Value.Month == m.Month)
                     .SumAsync(o => o.TotalAmount ?? 0);
@@ -99,6 +101,7 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetTopProducts()
         {
             var topProducts = await _context.Products
+                .AsNoTracking()
                 .OrderByDescending(p => p.SoldQuantity) 
                 .Take(10)
                 .Select(p => new {

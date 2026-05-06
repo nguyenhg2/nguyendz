@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
+using FlowerShop.Common;
 using Microsoft.AspNetCore.Authorization;
 
 namespace FlowerShop.Controllers.Admin
@@ -23,9 +24,11 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] bool? isActive,
             [FromQuery] int page = 1, [FromQuery] int limit = 20)
         {
-            var q = _context.Banners.AsQueryable();
+            (page, limit) = PagingHelper.Normalize(page, limit, defaultLimit: 20);
+
+            var q = _context.Banners.AsNoTracking().AsQueryable();
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(b => b.Title.Contains(search));
+                q = q.Where(b => (b.Title ?? "").Contains(search));
             if (isActive.HasValue)
                 q = q.Where(b => b.IsActive == isActive);
 
@@ -39,7 +42,7 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var b = await _context.Banners.FindAsync(id);
+            var b = await _context.Banners.AsNoTracking().FirstOrDefaultAsync(x => x.BannerId == id);
             if (b == null) return NotFound();
             return Ok(b);
         }
@@ -47,6 +50,10 @@ namespace FlowerShop.Controllers.Admin
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Banner banner)
         {
+            var error = ValidateBanner(banner);
+            if (error != null) return BadRequest(new { message = error });
+
+            banner.Title = banner.Title?.Trim();
             _context.Banners.Add(banner);
             await _context.SaveChangesAsync();
             return Ok(banner);
@@ -57,7 +64,11 @@ namespace FlowerShop.Controllers.Admin
         {
             var b = await _context.Banners.FindAsync(id);
             if (b == null) return NotFound();
-            b.Title = data.Title;
+
+            var error = ValidateBanner(data);
+            if (error != null) return BadRequest(new { message = error });
+
+            b.Title = data.Title?.Trim();
             b.ImageUrl = data.ImageUrl;
             b.LinkUrl = data.LinkUrl;
             b.IsActive = data.IsActive;
@@ -73,7 +84,7 @@ namespace FlowerShop.Controllers.Admin
             if (b == null) return NotFound();
             _context.Banners.Remove(b);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Xoa thanh cong" });
+            return Ok(new { message = "Xóa thành công" });
         }
 
         [HttpPatch("{id}/toggle")]
@@ -103,6 +114,14 @@ namespace FlowerShop.Controllers.Admin
             b.ImageUrl = "/uploads/banners/" + fileName;
             await _context.SaveChangesAsync();
             return Ok(new { imageUrl = b.ImageUrl });
+        }
+
+        private static string? ValidateBanner(Banner banner)
+        {
+            if (string.IsNullOrWhiteSpace(banner.Title))
+                return "Tiêu đề banner không được để trống";
+
+            return null;
         }
     }
 }

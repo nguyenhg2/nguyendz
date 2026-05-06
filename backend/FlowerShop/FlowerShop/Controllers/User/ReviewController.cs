@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
-using System.Security.Claims;
+using FlowerShop.Common;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FlowerShop.Controllers.User
 {
-    [Route("api/reviews")] 
+    [Route("api/reviews")]
     [ApiController]
+    [Authorize]
     public class ReviewController : ControllerBase
     {
         private readonly FlowerContext _context;
@@ -19,58 +21,43 @@ namespace FlowerShop.Controllers.User
         [HttpPost]
         public async Task<IActionResult> SubmitReview([FromBody] SubmitReviewRequest request)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
-            if (!int.TryParse(userIdClaim, out int userId))
-            {
+            var userId = UserClaimsHelper.GetUserId(User);
+            if (userId == null)
                 return Unauthorized(new { message = "Vui lòng đăng nhập để đánh giá" });
-            }
 
             if (request.ProductId == null || request.Rating == null)
-            {
                 return BadRequest(new { message = "Thiếu thông tin sản phẩm hoặc số sao" });
-            }
+
+            if (request.Rating < 1 || request.Rating > 5)
+                return BadRequest(new { message = "Số sao phải từ 1 đến 5" });
 
             var product = await _context.Products.FindAsync(request.ProductId);
             if (product == null)
-            {
                 return NotFound(new { message = "Sản phẩm không tồn tại" });
-            }
 
-            var existingReview = await _context.Reviews
-                .FirstOrDefaultAsync(r => r.ProductId == request.ProductId && r.UserId == userId);
+            var review = await _context.Reviews
+                .FirstOrDefaultAsync(r => r.ProductId == request.ProductId && r.UserId == userId.Value);
 
-            if (existingReview != null)
+            if (review == null)
             {
-                existingReview.Rating = request.Rating;
-                existingReview.Comment = request.Comment;
-                existingReview.CreatedDate = DateTime.UtcNow;
-            }
-            else
-            {
-                var review = new Review
+                review = new Review
                 {
                     ProductId = request.ProductId,
-                    UserId = userId,
-                    Rating = request.Rating,
-                    Comment = request.Comment,
-                    CreatedDate = DateTime.UtcNow
+                    UserId = userId.Value
                 };
                 _context.Reviews.Add(review);
             }
 
+            review.Rating = request.Rating;
+            review.Comment = request.Comment;
+            review.CreatedDate = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
 
-            var updatedProduct = await _context.Products
-                .Include(p => p.Reviews)
-                    .ThenInclude(r => r.User)
-                .FirstOrDefaultAsync(p => p.ProductId == request.ProductId);
+            product.Rating = await _context.Reviews
+                .Where(r => r.ProductId == request.ProductId)
+                .AverageAsync(r => (decimal?)r.Rating) ?? 0;
 
-            var avgRating = updatedProduct.Reviews.Any() 
-                ? updatedProduct.Reviews.Average(r => r.Rating) 
-                : 0;
-
-            product.Rating = (decimal?)avgRating ?? 0;
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Đánh giá thành công" });

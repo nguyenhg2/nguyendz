@@ -341,7 +341,6 @@ D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\bin\Debug\net10.
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\bin\Debug\net10.0\appsettings.json
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.staticwebassets.runtime.json
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.staticwebassets.endpoints.json
-D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.exe
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.deps.json
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.runtimeconfig.json
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.dll
@@ -754,3 +753,4 @@ D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\.build-check\run
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\.build-check\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\.build-check\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
 D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\.build-check\runtimes\win\lib\net9.0\System.Windows.Extensions.dll
+D:\User\Downloads\Code\flowershop\backend\FlowerShop\FlowerShop\bin\Debug\net10.0\FlowerShop.exe

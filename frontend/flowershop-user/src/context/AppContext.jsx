@@ -2,9 +2,59 @@ import { createContext, useState, useEffect } from 'react';
 
 export const AppContext = createContext();
 
+const parseRoute = () => {
+  const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+  const params = new URLSearchParams(window.location.search);
+  const [section, id] = path.split('/');
+
+  if (!path) return { page: 'home', params: {} };
+  if (section === 'cart') return { page: 'cart', params: {} };
+  if (section === 'checkout') return { page: 'checkout', params: {} };
+  if (section === 'profile') return { page: 'profile', params: {} };
+  if (section === 'contact') return { page: 'contact', params: {} };
+  if (section === 'search') return { page: 'search', params: { q: params.get('q') || '' } };
+  if (section === 'category') {
+    const cat = id || params.get('cat') || '';
+    return {
+      page: 'category',
+      params: {
+        cat: cat ? Number(cat) : '',
+        sort: params.get('sort') || undefined,
+        filter: params.get('filter') || undefined,
+      }
+    };
+  }
+  if (section === 'product' && id) return { page: 'product', params: { id: Number(id) } };
+
+  return { page: 'home', params: {} };
+};
+
+const buildUrl = (page, params = {}) => {
+  const query = new URLSearchParams();
+
+  switch (page) {
+    case 'cart': return '/cart';
+    case 'checkout': return '/checkout';
+    case 'profile': return '/profile';
+    case 'contact': return '/contact';
+    case 'search':
+      if (params.q) query.set('q', params.q);
+      return `/search${query.toString() ? `?${query}` : ''}`;
+    case 'category':
+      if (params.sort) query.set('sort', params.sort);
+      if (params.filter) query.set('filter', params.filter);
+      return `/category${params.cat ? `/${params.cat}` : ''}${query.toString() ? `?${query}` : ''}`;
+    case 'product':
+      return params.id ? `/product/${params.id}` : '/';
+    default:
+      return '/';
+  }
+};
+
 export function AppProvider({children}) {
-  const [page, setPage] = useState('home');
-  const [pageParams, setPageParams] = useState({});
+  const initialRoute = parseRoute();
+  const [page, setPage] = useState(initialRoute.page);
+  const [pageParams, setPageParams] = useState(initialRoute.params);
   const [cart, setCart] = useState(() => {
     try { const s = localStorage.getItem('flowershop_cart'); return s ? JSON.parse(s) : []; }
     catch { return []; }
@@ -29,7 +79,27 @@ export function AppProvider({children}) {
   useEffect(() => { localStorage.setItem('flowershop_cart', JSON.stringify(cart)); }, [cart]);
   useEffect(() => { localStorage.setItem('flowershop_wishlist', JSON.stringify(wishlist)); }, [wishlist]);
 
-  const navigate = (p, params={}) => { setPage(p); setPageParams(params); window.scrollTo(0,0); };
+  useEffect(() => {
+    const onPopState = () => {
+      const route = parseRoute();
+      setPage(route.page);
+      setPageParams(route.params);
+      window.scrollTo(0, 0);
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigate = (p, params={}) => {
+    setPage(p);
+    setPageParams(params);
+    const url = buildUrl(p, params);
+    if (`${window.location.pathname}${window.location.search}` !== url) {
+      window.history.pushState({}, '', url);
+    }
+    window.scrollTo(0,0);
+  };
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(null), 2500); };
 
   // ← FIX: normalize id và imageUrl khi thêm vào giỏ

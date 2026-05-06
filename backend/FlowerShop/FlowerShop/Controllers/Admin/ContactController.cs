@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
+using FlowerShop.Common;
 using Microsoft.AspNetCore.Authorization;
 
 namespace FlowerShop.Controllers.Admin
@@ -21,12 +22,17 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetAll([FromQuery] bool? isRead, [FromQuery] string? search,
             [FromQuery] int page = 1, [FromQuery] int limit = 15)
         {
-            var q = _context.Contacts.AsQueryable();
+            (page, limit) = PagingHelper.Normalize(page, limit, defaultLimit: 15);
+
+            var q = _context.Contacts.AsNoTracking().AsQueryable();
 
             if (isRead.HasValue)
                 q = q.Where(c => c.IsRead == isRead);
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(c => c.FullName.Contains(search) || c.Email.Contains(search) || c.Subject.Contains(search));
+                q = q.Where(c =>
+                    (c.FullName ?? "").Contains(search)
+                    || (c.Email ?? "").Contains(search)
+                    || (c.Subject ?? "").Contains(search));
 
             var total = await q.CountAsync();
             var items = await q.OrderByDescending(c => c.CreatedDate)
@@ -61,7 +67,7 @@ namespace FlowerShop.Controllers.Admin
             if (c == null) return NotFound();
             _context.Contacts.Remove(c);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Xoa thanh cong" });
+            return Ok(new { message = "Xóa thành công" });
         }
     }
 }

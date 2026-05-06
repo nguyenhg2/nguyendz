@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
+using FlowerShop.Common;
 using Microsoft.AspNetCore.Authorization;
 
 namespace FlowerShop.Controllers.Admin
@@ -22,7 +23,8 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] ProductParams f)
         {
-            var q = _context.Products.Include(p => p.Category).Include(p => p.Images).AsQueryable();
+            var paging = PagingHelper.Normalize(f.Page, f.Limit);
+            var q = _context.Products.AsNoTracking().Include(p => p.Category).Include(p => p.Images).AsQueryable();
 
             if (!string.IsNullOrEmpty(f.Search))
                 q = q.Where(p => p.ProductName.Contains(f.Search));
@@ -46,14 +48,14 @@ namespace FlowerShop.Controllers.Admin
             };
 
             var total = await q.CountAsync();
-            var items = await q.Skip((f.Page - 1) * f.Limit).Take(f.Limit).ToListAsync();
+            var items = await q.Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit).ToListAsync();
             return Ok(new { total, items });
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var p = await _context.Products.Include(x => x.Category).Include(x => x.Images)
+            var p = await _context.Products.AsNoTracking().Include(x => x.Category).Include(x => x.Images)
                 .FirstOrDefaultAsync(x => x.ProductId == id);
             if (p == null) return NotFound();
             return Ok(p);
@@ -62,6 +64,10 @@ namespace FlowerShop.Controllers.Admin
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Product product)
         {
+            var error = ValidateProduct(product);
+            if (error != null) return BadRequest(new { message = error });
+
+            product.ProductName = product.ProductName.Trim();
             product.CreatedDate = DateTime.Now;
             product.IsActive = product.IsActive ?? true;
             _context.Products.Add(product);
@@ -75,7 +81,10 @@ namespace FlowerShop.Controllers.Admin
             var p = await _context.Products.FindAsync(id);
             if (p == null) return NotFound();
 
-            p.ProductName = data.ProductName;
+            var error = ValidateProduct(data);
+            if (error != null) return BadRequest(new { message = error });
+
+            p.ProductName = data.ProductName.Trim();
             p.Description = data.Description;
             p.Price = data.Price;
             p.DiscountPrice = data.DiscountPrice;
@@ -100,7 +109,7 @@ namespace FlowerShop.Controllers.Admin
             {
                 p.IsActive = false;
                 await _context.SaveChangesAsync();
-                return Ok(new { message = "San pham co don hang, da an." });
+                return Ok(new { message = "Sản phẩm có đơn hàng, đã ẩn." });
             }
 
             var images = await _context.ProductImages.Where(i => i.ProductId == id).ToListAsync();
@@ -113,7 +122,7 @@ namespace FlowerShop.Controllers.Admin
             _context.ProductImages.RemoveRange(images);
             _context.Products.Remove(p);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Xoa thanh cong" });
+            return Ok(new { message = "Xóa thành công" });
         }
 
         [HttpPatch("{id}/toggle")]
@@ -131,10 +140,13 @@ namespace FlowerShop.Controllers.Admin
         {
             var p = await _context.Products.FindAsync(id);
             if (p == null) return NotFound();
-            if (files == null || files.Count == 0) return BadRequest("Khong co file");
+            if (files == null || files.Count == 0) return BadRequest("Không có file");
 
             var folder = Path.Combine(_env.WebRootPath, "uploads/products");
             if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+            var existingImages = await _context.ProductImages.Where(x => x.ProductId == id).ToListAsync();
+            foreach (var existing in existingImages) existing.IsMain = false;
 
             for (int i = 0; i < files.Count; i++)
             {
@@ -169,7 +181,7 @@ namespace FlowerShop.Controllers.Admin
 
             _context.ProductImages.Remove(img);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Xoa anh thanh cong" });
+            return Ok(new { message = "Xóa ảnh thành công" });
         }
 
         [HttpPatch("{id}/images/{imageId}/set-main")]
@@ -194,6 +206,22 @@ namespace FlowerShop.Controllers.Admin
             if (string.IsNullOrEmpty(url) || url.StartsWith("http")) return;
             var path = Path.Combine(_env.WebRootPath, url.TrimStart('/'));
             if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+        }
+
+        private static string? ValidateProduct(Product product)
+        {
+            if (string.IsNullOrWhiteSpace(product.ProductName))
+                return "Tên sản phẩm không được để trống";
+            if (product.Price < 0)
+                return "Giá sản phẩm không hợp lệ";
+            if (product.DiscountPrice.HasValue && product.DiscountPrice < 0)
+                return "Giá giảm không hợp lệ";
+            if (product.DiscountPrice.HasValue && product.DiscountPrice > product.Price)
+                return "Giá giảm không được lớn hơn giá gốc";
+            if (product.StockQuantity.HasValue && product.StockQuantity < 0)
+                return "Số lượng tồn kho không hợp lệ";
+
+            return null;
         }
     }
 

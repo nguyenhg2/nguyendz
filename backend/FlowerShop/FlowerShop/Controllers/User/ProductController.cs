@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
+using FlowerShop.Common;
 
 namespace FlowerShop.Controllers.User
 {
@@ -20,7 +21,13 @@ namespace FlowerShop.Controllers.User
             [FromQuery] int page = 1, [FromQuery] int pageSize = 12,
             [FromQuery] string? q=null, [FromQuery] string? priceRange=null)
         {
-            var query = _context.Products.Where(p => p.IsActive == true).AsQueryable();
+            (page, pageSize) = PagingHelper.Normalize(page, pageSize, defaultLimit: 12);
+
+            var query = _context.Products
+                .AsNoTracking()
+                .Include(p => p.Images)
+                .Where(p => p.IsActive == true)
+                .AsQueryable();
 
             if (!string.IsNullOrEmpty(q))
                 query = query.Where(p => p.ProductName.Contains(q));
@@ -61,10 +68,12 @@ namespace FlowerShop.Controllers.User
                 items = products.Select(p => new
                 {
                     productId = p.ProductId,
+                    id = p.ProductId,
                     name = p.ProductName,
                     price = p.Price,
                     sale = p.DiscountPrice,
-                    imageUrl = p.ImageUrl,
+                    imageUrl = GetMainImage(p),
+                    images = GetImages(p),
                     categoryId = p.CategoryId,
                     rating = p.Rating ?? 0,
                     soldQuantity = p.SoldQuantity,
@@ -79,7 +88,9 @@ namespace FlowerShop.Controllers.User
         public async Task<IActionResult> GetProductDetail(int id)
         {
             var product = await _context.Products
+                .AsNoTracking()
                 .Include(p => p.Category)
+                .Include(p => p.Images)
                 .Include(p => p.Reviews).ThenInclude(r => r.User)
                 .FirstOrDefaultAsync(p => p.ProductId == id);
 
@@ -93,7 +104,8 @@ namespace FlowerShop.Controllers.User
                 desc = product.Description,          
                 price = product.Price,
                 sale = product.DiscountPrice,
-                imageUrl = product.ImageUrl,
+                imageUrl = GetMainImage(product),
+                images = GetImages(product),
                 cat = product.CategoryId,
                 categoryName = product.Category?.CategoryName,
                 rating = product.Rating ?? 0,
@@ -111,5 +123,36 @@ namespace FlowerShop.Controllers.User
                 }).OrderByDescending(r => r.createdAt).ToList()
             });
         }
+
+        private static string? GetMainImage(Product product)
+        {
+            return product.Images
+                .OrderByDescending(i => i.IsMain)
+                .ThenBy(i => i.Id)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault() ?? product.ImageUrl;
+        }
+
+        private static List<ProductImageDto> GetImages(Product product)
+        {
+            return product.Images
+                .OrderByDescending(i => i.IsMain)
+                .ThenBy(i => i.Id)
+                .Select(i => new
+                ProductImageDto
+                {
+                    Id = i.Id,
+                    ImageUrl = i.ImageUrl,
+                    IsMain = i.IsMain
+                })
+                .ToList();
+        }
+    }
+
+    public class ProductImageDto
+    {
+        public int Id { get; set; }
+        public string? ImageUrl { get; set; }
+        public bool? IsMain { get; set; }
     }
 }

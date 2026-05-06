@@ -3,7 +3,6 @@ using FlowerShop.Data;
 using FlowerShop.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
 
 namespace FlowerShop.Controllers.User
 {
@@ -24,11 +23,8 @@ namespace FlowerShop.Controllers.User
         [Authorize]
         public async Task<IActionResult> GetMe()
         {
-            var claim = User.FindFirst(ClaimTypes.NameIdentifier)
-                ?? User.FindFirst("nameid")
-                ?? User.FindFirst("sub");
-            if (claim == null) return Unauthorized();
-            if (!int.TryParse(claim.Value, out int userId)) return Unauthorized();
+            var userId = UserClaimsHelper.GetUserId(User);
+            if (userId == null) return Unauthorized();
 
             var u = await _context.Users.FindAsync(userId);
             if (u == null || u.IsActive != true) return Unauthorized();
@@ -47,43 +43,61 @@ namespace FlowerShop.Controllers.User
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+                return BadRequest(new { message = "Vui lòng nhập email và mật khẩu" });
+
+            var email = request.Email.Trim();
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
-                return Unauthorized(new { message = "Email hoac mat khau khong dung" });
+                return Unauthorized(new { message = "Email hoặc mật khẩu không đúng" });
             if (user.IsActive != true)
-                return Unauthorized(new { message = "Tai khoan da bi khoa" });
+                return Unauthorized(new { message = "Tài khoản đã bị khóa" });
 
             var parts = user.PasswordHash.Split('.');
             if (parts.Length != 2)
-                return Unauthorized(new { message = "Loi du lieu" });
+                return Unauthorized(new { message = "Lỗi dữ liệu" });
 
-            byte[] salt = Convert.FromBase64String(parts[0]);
+            byte[] salt;
+            try
+            {
+                salt = Convert.FromBase64String(parts[0]);
+            }
+            catch
+            {
+                return Unauthorized(new { message = "Lỗi dữ liệu" });
+            }
+
             if (!TokenHelper.IsValidPassword(request.Password, salt, parts[1]))
-                return Unauthorized(new { message = "Email hoac mat khau khong dung" });
-
-            string secretKey = _configuration["Jwt:Key"] ?? "Chuoi_Secret_Key_Mac_Dinh_Sieu_Bao_Mat_123";
-            string token = TokenHelper.GenerateToken(secretKey, 480, user.UserId.ToString(), user.FullName, user.Role ?? "Customer");
+                return Unauthorized(new { message = "Email hoặc mật khẩu không đúng" });
 
             return Ok(new
             {
-                token,
-                user = new { userId = user.UserId, fullName = user.FullName, email = user.Email, role = user.Role }
+                token = CreateToken(user),
+                user = ToUserDto(user)
             });
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == request.Email))
-                return BadRequest(new { message = "Email da ton tai" });
+            if (string.IsNullOrWhiteSpace(request.Email)
+                || string.IsNullOrWhiteSpace(request.Password)
+                || string.IsNullOrWhiteSpace(request.FullName))
+            {
+                return BadRequest(new { message = "Vui lòng nhập đầy đủ thông tin" });
+            }
+
+            var email = request.Email.Trim();
+            if (await _context.Users.AnyAsync(u => u.Email == email))
+                return BadRequest(new { message = "Email đã tồn tại" });
 
             string hash = TokenHelper.HashPassword(request.Password, out byte[] salt);
             var newUser = new FlowerShop.Data.User
             {
-                Email = request.Email,
-                FullName = request.FullName,
+                Email = email,
+                FullName = request.FullName.Trim(),
                 PasswordHash = Convert.ToBase64String(salt) + "." + hash,
-                Phone = request.Phone,
+                Phone = request.Phone?.Trim(),
                 Role = "Customer",
                 CreatedDate = DateTime.Now,
                 IsActive = true
@@ -91,15 +105,31 @@ namespace FlowerShop.Controllers.User
             _context.Users.Add(newUser);
             await _context.SaveChangesAsync();
 
-            string secretKey = _configuration["Jwt:Key"] ?? "Chuoi_Secret_Key_Mac_Dinh_Sieu_Bao_Mat_123";
-            string token = TokenHelper.GenerateToken(secretKey, 480, newUser.UserId.ToString(), newUser.FullName, newUser.Role ?? "Customer");
-
             return Ok(new
             {
                 success = true,
-                token,
-                user = new { userId = newUser.UserId, fullName = newUser.FullName, email = newUser.Email, role = newUser.Role, phone = newUser.Phone }
+                token = CreateToken(newUser),
+                user = ToUserDto(newUser)
             });
+        }
+
+        private string CreateToken(FlowerShop.Data.User user)
+        {
+            string secretKey = _configuration["Jwt:Key"] ?? "Chuoi_Secret_Key_Mac_Dinh_Sieu_Bao_Mat_123";
+            return TokenHelper.GenerateToken(secretKey, 480, user.UserId.ToString(), user.FullName, user.Role ?? "Customer");
+        }
+
+        private static object ToUserDto(FlowerShop.Data.User user)
+        {
+            return new
+            {
+                userId = user.UserId,
+                fullName = user.FullName,
+                email = user.Email,
+                role = user.Role,
+                phone = user.Phone,
+                avatar = user.Avatar
+            };
         }
     }
 
