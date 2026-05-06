@@ -46,7 +46,7 @@ namespace FlowerShop.Controllers.Admin
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] User data)
+        public async Task<IActionResult> Update(int id, [FromBody] FlowerShop.Data.User data)
         {
             var u = await _context.Users.FindAsync(id);
             if (u == null) return NotFound();

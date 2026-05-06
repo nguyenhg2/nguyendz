@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const BASE = import.meta.env.VITE_API_URL || 'https://localhost:7242/api';
+export const IMG_URL = BASE.replace('/api', '');
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://localhost:7242/api',
+  baseURL: BASE,
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -15,12 +18,9 @@ api.interceptors.request.use(cfg => {
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
-      const url = err.config?.url || '';
-      if (!url.includes('/auth/me') && !url.includes('/auth/login')) {
-        localStorage.removeItem('admin_token');
-        window.location.reload();
-      }
+    if (err.response?.status === 401 && !err.config.url.includes('/auth/me')) {
+      localStorage.removeItem('admin_token');
+      window.location.href = '/';
     }
     return Promise.reject(err);
   }

@@ -24,51 +24,22 @@ namespace FlowerShop.Controllers.User
         [Authorize]
         public async Task<IActionResult> GetMe()
         {
-            var claim = User.FindFirst(ClaimTypes.NameIdentifier)
-                     ?? User.FindFirst("nameid");
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (claim == null) return Unauthorized();
+            if (!int.TryParse(claim.Value, out int userId)) return Unauthorized();
 
-            if (!int.TryParse(claim.Value, out int userId))
-                return Unauthorized();
-
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null || user.IsActive != true)
-                return Unauthorized();
+            var u = await _context.Users.FindAsync(userId);
+            if (u == null || u.IsActive != true) return Unauthorized();
 
             return Ok(new
             {
-                userId = user.UserId,
-                fullName = user.FullName,
-                email = user.Email,
-                role = user.Role,
-                phone = user.Phone,
-                avatar = user.Avatar
+                userId = u.UserId,
+                fullName = u.FullName,
+                email = u.Email,
+                role = u.Role,
+                phone = u.Phone,
+                avatar = u.Avatar
             });
-        }
-
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
-        {
-            if (await _context.Users.AnyAsync(u => u.Email == request.Email))
-                return BadRequest(new { message = "Email da ton tai" });
-
-            string hashedPwd = TokenHelper.HashPassword(request.Password, out byte[] salt);
-            string storedPassword = Convert.ToBase64String(salt) + "." + hashedPwd;
-
-            var newUser = new FlowerShop.Data.User
-            {
-                Email = request.Email,
-                FullName = request.FullName,
-                PasswordHash = storedPassword,
-                Phone = request.Phone,
-                Role = "Customer",
-                CreatedDate = DateTime.Now,
-                IsActive = true
-            };
-
-            _context.Users.Add(newUser);
-            await _context.SaveChangesAsync();
-            return Ok(new { success = true });
         }
 
         [HttpPost("login")]
@@ -77,7 +48,6 @@ namespace FlowerShop.Controllers.User
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
             if (user == null)
                 return Unauthorized(new { message = "Email hoac mat khau khong dung" });
-
             if (user.IsActive != true)
                 return Unauthorized(new { message = "Tai khoan da bi khoa" });
 
@@ -86,9 +56,7 @@ namespace FlowerShop.Controllers.User
                 return Unauthorized(new { message = "Loi du lieu" });
 
             byte[] salt = Convert.FromBase64String(parts[0]);
-            string storedHash = parts[1];
-
-            if (!TokenHelper.IsValidPassword(request.Password, salt, storedHash))
+            if (!TokenHelper.IsValidPassword(request.Password, salt, parts[1]))
                 return Unauthorized(new { message = "Email hoac mat khau khong dung" });
 
             string secretKey = _configuration["Jwt:Key"] ?? "Chuoi_Secret_Key_Sieu_Bao_Mat_Cua_Ban_123";
@@ -100,6 +68,34 @@ namespace FlowerShop.Controllers.User
                 user = new { userId = user.UserId, fullName = user.FullName, email = user.Email, role = user.Role }
             });
         }
+
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        {
+            if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+                return BadRequest(new { message = "Email da ton tai" });
+
+            string hash = TokenHelper.HashPassword(request.Password, out byte[] salt);
+            var newUser = new FlowerShop.Data.User
+            {
+                Email = request.Email,
+                FullName = request.FullName,
+                PasswordHash = Convert.ToBase64String(salt) + "." + hash,
+                Phone = request.Phone,
+                Role = "Customer",
+                CreatedDate = DateTime.Now,
+                IsActive = true
+            };
+            _context.Users.Add(newUser);
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true });
+        }
+    }
+
+    public class LoginRequest
+    {
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
     }
 
     public class RegisterRequest
@@ -108,11 +104,5 @@ namespace FlowerShop.Controllers.User
         public string Password { get; set; } = "";
         public string FullName { get; set; } = "";
         public string Phone { get; set; } = "";
-    }
-
-    public class LoginRequest
-    {
-        public string Email { get; set; } = "";
-        public string Password { get; set; } = "";
     }
 }
