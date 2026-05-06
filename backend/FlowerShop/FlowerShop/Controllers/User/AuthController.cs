@@ -90,7 +90,16 @@ namespace FlowerShop.Controllers.User
             };
             _context.Users.Add(newUser);
             await _context.SaveChangesAsync();
-            return Ok(new { success = true });
+
+            string secretKey = _configuration["Jwt:Key"] ?? "Chuoi_Secret_Key_Mac_Dinh_Sieu_Bao_Mat_123";
+            string token = TokenHelper.GenerateToken(secretKey, 480, newUser.UserId.ToString(), newUser.FullName, newUser.Role ?? "Customer");
+
+            return Ok(new
+            {
+                success = true,
+                token,
+                user = new { userId = newUser.UserId, fullName = newUser.FullName, email = newUser.Email, role = newUser.Role, phone = newUser.Phone }
+            });
         }
     }
 

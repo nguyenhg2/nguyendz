@@ -6,8 +6,10 @@
     "\\backend\\FlowerShop\\FlowerShop",
     "\\backend\\FlowerShop\\FlowerShop\\Controllers",
     "\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin",
-    "\\backend\\FlowerShop\\FlowerShop\\Controllers\\User"
+    "\\backend\\FlowerShop\\FlowerShop\\Controllers\\User",
+    "\\frontend",
+    "\\frontend\\flowershop-admin"
   ],
-  "SelectedNode": "\\frontend",
+  "SelectedNode": "\\frontend\\flowershop-user",
   "PreviewInSolutionExplorer": false
 }

@@ -61,6 +61,7 @@ namespace FlowerShop.Common
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(secretKey);
+            var normalizedRole = string.IsNullOrWhiteSpace(roles) ? "Customer" : roles.Trim();
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
@@ -68,11 +69,11 @@ namespace FlowerShop.Common
                 {
                     new Claim(ClaimTypes.Name, userName),
                     new Claim(ClaimTypes.NameIdentifier, userId),
-                    new Claim(ClaimTypes.Role, roles),
+                    new Claim(ClaimTypes.Role, normalizedRole),
                     new Claim(JwtRegisteredClaimNames.Sub, userId),
                     new Claim(JwtRegisteredClaimNames.UniqueName, userName),
                     new Claim("nameid", userId),
-                    new Claim("role", roles)
+                    new Claim("role", normalizedRole)
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(minuteExpireTime),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

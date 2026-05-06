@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,6 +52,26 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero,
         NameClaimType = "unique_name",
         RoleClaimType = "role"
+    };
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = context =>
+        {
+            if (context.Principal?.Identity is ClaimsIdentity identity
+                && !identity.HasClaim(c => c.Type == "role"))
+            {
+                var roleClaim = identity.FindFirst(ClaimTypes.Role)
+                    ?? identity.FindFirst("roles")
+                    ?? identity.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
+
+                if (!string.IsNullOrWhiteSpace(roleClaim?.Value))
+                {
+                    identity.AddClaim(new Claim("role", roleClaim.Value.Trim()));
+                }
+            }
+
+            return Task.CompletedTask;
+        }
     };
 });
 
