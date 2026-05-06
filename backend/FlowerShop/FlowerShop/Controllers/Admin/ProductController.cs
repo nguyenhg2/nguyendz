@@ -26,26 +26,8 @@ namespace FlowerShop.Controllers.Admin
             var paging = PagingHelper.Normalize(f.Page, f.Limit);
             var q = _context.Products.AsNoTracking().Include(p => p.Category).Include(p => p.Images).AsQueryable();
 
-            if (!string.IsNullOrEmpty(f.Search))
-                q = q.Where(p => p.ProductName.Contains(f.Search));
-            if (f.CategoryId.HasValue)
-                q = q.Where(p => p.CategoryId == f.CategoryId);
-            if (f.IsActive.HasValue)
-                q = q.Where(p => p.IsActive == f.IsActive);
-            if (f.IsFeatured.HasValue)
-                q = q.Where(p => p.IsFeatured == f.IsFeatured);
-            if (f.MinPrice.HasValue)
-                q = q.Where(p => p.Price >= f.MinPrice);
-            if (f.MaxPrice.HasValue)
-                q = q.Where(p => p.Price <= f.MaxPrice);
-
-            q = f.SortBy switch
-            {
-                "price_asc" => q.OrderBy(p => p.Price),
-                "price_desc" => q.OrderByDescending(p => p.Price),
-                "sold" => q.OrderByDescending(p => p.SoldQuantity),
-                _ => q.OrderByDescending(p => p.CreatedDate)
-            };
+            q = ApplyFilters(q, f);
+            q = ApplySort(q, f.SortBy);
 
             var total = await q.CountAsync();
             var items = await q.Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit).ToListAsync();
@@ -84,16 +66,7 @@ namespace FlowerShop.Controllers.Admin
             var error = ValidateProduct(data);
             if (error != null) return BadRequest(new { message = error });
 
-            p.ProductName = data.ProductName.Trim();
-            p.Description = data.Description;
-            p.Price = data.Price;
-            p.DiscountPrice = data.DiscountPrice;
-            p.StockQuantity = data.StockQuantity;
-            p.CategoryId = data.CategoryId;
-            p.IsActive = data.IsActive;
-            p.IsFeatured = data.IsFeatured;
-            p.ImageUrl = data.ImageUrl;
-            p.UpdatedDate = DateTime.Now;
+            UpdateProductData(p, data);
 
             await _context.SaveChangesAsync();
             return Ok(p);
@@ -150,15 +123,12 @@ namespace FlowerShop.Controllers.Admin
 
             for (int i = 0; i < files.Count; i++)
             {
-                var fileName = Guid.NewGuid() + Path.GetExtension(files[i].FileName);
-                var path = Path.Combine(folder, fileName);
-                using var stream = new FileStream(path, FileMode.Create);
-                await files[i].CopyToAsync(stream);
+                var imageUrl = await SaveImage(files[i], folder);
 
                 var img = new ProductImage
                 {
                     ProductId = id,
-                    ImageUrl = "/uploads/products/" + fileName,
+                    ImageUrl = imageUrl,
                     IsMain = (i == mainIndex)
                 };
                 _context.ProductImages.Add(img);
@@ -206,6 +176,60 @@ namespace FlowerShop.Controllers.Admin
             if (string.IsNullOrEmpty(url) || url.StartsWith("http")) return;
             var path = Path.Combine(_env.WebRootPath, url.TrimStart('/'));
             if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+        }
+
+        private static IQueryable<Product> ApplyFilters(IQueryable<Product> q, ProductParams f)
+        {
+            if (!string.IsNullOrEmpty(f.Search))
+                q = q.Where(p => p.ProductName.Contains(f.Search));
+            if (f.CategoryId.HasValue)
+                q = q.Where(p => p.CategoryId == f.CategoryId);
+            if (f.IsActive.HasValue)
+                q = q.Where(p => p.IsActive == f.IsActive);
+            if (f.IsFeatured.HasValue)
+                q = q.Where(p => p.IsFeatured == f.IsFeatured);
+            if (f.MinPrice.HasValue)
+                q = q.Where(p => p.Price >= f.MinPrice);
+            if (f.MaxPrice.HasValue)
+                q = q.Where(p => p.Price <= f.MaxPrice);
+
+            return q;
+        }
+
+        private static IQueryable<Product> ApplySort(IQueryable<Product> q, string? sortBy)
+        {
+            return sortBy switch
+            {
+                "price_asc" => q.OrderBy(p => p.Price),
+                "price_desc" => q.OrderByDescending(p => p.Price),
+                "sold" => q.OrderByDescending(p => p.SoldQuantity),
+                _ => q.OrderByDescending(p => p.CreatedDate)
+            };
+        }
+
+        private static void UpdateProductData(Product product, Product data)
+        {
+            product.ProductName = data.ProductName.Trim();
+            product.Description = data.Description;
+            product.Price = data.Price;
+            product.DiscountPrice = data.DiscountPrice;
+            product.StockQuantity = data.StockQuantity;
+            product.CategoryId = data.CategoryId;
+            product.IsActive = data.IsActive;
+            product.IsFeatured = data.IsFeatured;
+            product.ImageUrl = data.ImageUrl;
+            product.UpdatedDate = DateTime.Now;
+        }
+
+        private static async Task<string> SaveImage(IFormFile file, string folder)
+        {
+            var fileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
+            var path = Path.Combine(folder, fileName);
+
+            using var stream = new FileStream(path, FileMode.Create);
+            await file.CopyToAsync(stream);
+
+            return "/uploads/products/" + fileName;
         }
 
         private static string? ValidateProduct(Product product)

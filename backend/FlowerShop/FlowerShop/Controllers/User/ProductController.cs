@@ -29,31 +29,8 @@ namespace FlowerShop.Controllers.User
                 .Where(p => p.IsActive == true)
                 .AsQueryable();
 
-            if (!string.IsNullOrEmpty(q))
-                query = query.Where(p => p.ProductName.Contains(q));
-
-            if (!string.IsNullOrEmpty(priceRange))
-            {
-                var parts = priceRange.Split('-');
-                if (parts.Length == 2)
-                {
-                    if (!string.IsNullOrEmpty(parts[0]) && decimal.TryParse(parts[0], out var minPrice))
-                        query = query.Where(p => p.Price >= minPrice);
-                    if (!string.IsNullOrEmpty(parts[1]) && decimal.TryParse(parts[1], out var maxPrice))
-                        query = query.Where(p => p.Price <= maxPrice);
-                }
-            }
-
-            if (cat.HasValue)
-                query = query.Where(p => p.CategoryId == cat);
-
-            query = sort switch
-            {
-                "price_asc" => query.OrderBy(p => p.Price),
-                "price_desc" => query.OrderByDescending(p => p.Price),
-                "sold" => query.OrderByDescending(p => p.SoldQuantity),
-                _ => query.OrderByDescending(p => p.CreatedDate)
-            };
+            query = ApplyFilters(query, cat, q, priceRange);
+            query = ApplySort(query, sort);
 
             var totalItems = await query.CountAsync();
             var products = await query
@@ -65,22 +42,7 @@ namespace FlowerShop.Controllers.User
             {
                 totalItems,
                 totalPages = (int)Math.Ceiling(totalItems / (double)pageSize),
-                items = products.Select(p => new
-                {
-                    productId = p.ProductId,
-                    id = p.ProductId,
-                    name = p.ProductName,
-                    price = p.Price,
-                    sale = p.DiscountPrice,
-                    imageUrl = GetMainImage(p),
-                    images = GetImages(p),
-                    categoryId = p.CategoryId,
-                    rating = p.Rating ?? 0,
-                    soldQuantity = p.SoldQuantity,
-                    isFeatured = p.IsFeatured,       
-                    createdDate = p.CreatedDate,     
-                    isNew = p.CreatedDate.HasValue && p.CreatedDate.Value.AddDays(7) >= DateTime.Now
-                })
+                items = products.Select(ToProductItem)
             });
         }
 
@@ -96,7 +58,69 @@ namespace FlowerShop.Controllers.User
 
             if (product == null) return NotFound(new { message = "Không tìm thấy sản phẩm" });
 
-            return Ok(new
+            return Ok(ToProductDetail(product));
+        }
+
+        private static IQueryable<Product> ApplyFilters(IQueryable<Product> query, int? cat, string? keyword, string? priceRange)
+        {
+            if (!string.IsNullOrEmpty(keyword))
+                query = query.Where(p => p.ProductName.Contains(keyword));
+
+            if (cat.HasValue)
+                query = query.Where(p => p.CategoryId == cat);
+
+            return ApplyPriceRange(query, priceRange);
+        }
+
+        private static IQueryable<Product> ApplyPriceRange(IQueryable<Product> query, string? priceRange)
+        {
+            if (string.IsNullOrEmpty(priceRange)) return query;
+
+            var parts = priceRange.Split('-');
+            if (parts.Length != 2) return query;
+
+            if (!string.IsNullOrEmpty(parts[0]) && decimal.TryParse(parts[0], out var minPrice))
+                query = query.Where(p => p.Price >= minPrice);
+            if (!string.IsNullOrEmpty(parts[1]) && decimal.TryParse(parts[1], out var maxPrice))
+                query = query.Where(p => p.Price <= maxPrice);
+
+            return query;
+        }
+
+        private static IQueryable<Product> ApplySort(IQueryable<Product> query, string? sort)
+        {
+            return sort switch
+            {
+                "price_asc" => query.OrderBy(p => p.Price),
+                "price_desc" => query.OrderByDescending(p => p.Price),
+                "sold" => query.OrderByDescending(p => p.SoldQuantity),
+                _ => query.OrderByDescending(p => p.CreatedDate)
+            };
+        }
+
+        private static object ToProductItem(Product product)
+        {
+            return new
+            {
+                productId = product.ProductId,
+                id = product.ProductId,
+                name = product.ProductName,
+                price = product.Price,
+                sale = product.DiscountPrice,
+                imageUrl = GetMainImage(product),
+                images = GetImages(product),
+                categoryId = product.CategoryId,
+                rating = product.Rating ?? 0,
+                soldQuantity = product.SoldQuantity,
+                isFeatured = product.IsFeatured,
+                createdDate = product.CreatedDate,
+                isNew = IsNew(product)
+            };
+        }
+
+        private static object ToProductDetail(Product product)
+        {
+            return new
             {
                 productId = product.ProductId,
                 id = product.ProductId,            
@@ -112,7 +136,7 @@ namespace FlowerShop.Controllers.User
                 soldQuantity = product.SoldQuantity,
                 stockQuantity = product.StockQuantity,
                 isFeatured = product.IsFeatured,
-                isNew = product.CreatedDate.HasValue && product.CreatedDate.Value.AddDays(7) >= DateTime.Now,
+                isNew = IsNew(product),
                 reviews = product.Reviews.Select(r => new
                 {
                     id = r.ReviewId,                 
@@ -121,7 +145,12 @@ namespace FlowerShop.Controllers.User
                     createdAt = r.CreatedDate,
                     userName = r.User?.FullName ?? "Ẩn danh"
                 }).OrderByDescending(r => r.createdAt).ToList()
-            });
+            };
+        }
+
+        private static bool IsNew(Product product)
+        {
+            return product.CreatedDate.HasValue && product.CreatedDate.Value.AddDays(7) >= DateTime.Now;
         }
 
         private static string? GetMainImage(Product product)

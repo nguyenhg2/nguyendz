@@ -40,11 +40,8 @@ namespace FlowerShop.Controllers.Api
             var userId = UserClaimsHelper.GetUserId(User);
             if (userId == null) return Unauthorized();
 
-            if (dto.Items.Count == 0)
-                return BadRequest(new { message = "Đơn hàng phải có sản phẩm" });
-
-            if (dto.Items.Any(x => x.Quantity <= 0))
-                return BadRequest(new { message = "Số lượng sản phẩm không hợp lệ" });
+            var error = ValidateOrder(dto);
+            if (error != null) return BadRequest(new { message = error });
 
             var productIds = dto.Items.Select(x => x.ProductId).Distinct().ToList();
             var products = await _context.Products
@@ -57,52 +54,18 @@ namespace FlowerShop.Controllers.Api
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var orderDetails = new List<OrderDetail>();
-                decimal totalAmount = 0;
+                var orderResult = CreateOrderDetails(dto.Items, products);
+                if (orderResult.Error != null) return BadRequest(new { message = orderResult.Error });
 
-                foreach (var item in dto.Items)
-                {
-                    var product = products.First(p => p.ProductId == item.ProductId);
-                    var unitPrice = product.DiscountPrice ?? product.Price;
-
-                    if (product.StockQuantity.HasValue && product.StockQuantity < item.Quantity)
-                        return BadRequest(new { message = $"Sản phẩm {product.ProductName} không đủ hàng" });
-
-                    orderDetails.Add(new OrderDetail
-                    {
-                        ProductId = item.ProductId,
-                        Quantity = item.Quantity,
-                        UnitPrice = unitPrice,
-                        Subtotal = unitPrice * item.Quantity
-                    });
-
-                    totalAmount += unitPrice * item.Quantity;
-                    product.StockQuantity = product.StockQuantity.HasValue ? product.StockQuantity - item.Quantity : null;
-                    product.SoldQuantity = (product.SoldQuantity ?? 0) + item.Quantity;
-                }
-
-                var order = new Order
-                {
-                    UserId = userId.Value,
-                    OrderDate = DateTime.Now,
-                    ReceiverName = dto.ReceiverName?.Trim(),
-                    ReceiverPhone = dto.ReceiverPhone?.Trim(),
-                    ReceiverAddress = dto.ReceiverAddress?.Trim(),
-                    Note = dto.Note?.Trim(),
-                    PaymentMethod = dto.PaymentMethod?.Trim(),
-                    Status = "Chờ xử lý", 
-                    TotalAmount = totalAmount
-                };
+                var order = CreateOrder(dto, userId.Value, orderResult.TotalAmount);
 
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
 
-                foreach (var detail in orderDetails)
-                {
+                foreach (var detail in orderResult.Details)
                     detail.OrderId = order.OrderId;
-                }
 
-                _context.OrderDetails.AddRange(orderDetails);
+                _context.OrderDetails.AddRange(orderResult.Details);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -137,5 +100,69 @@ namespace FlowerShop.Controllers.Api
 
             return Ok(myOrders);
         }
+
+        private static string? ValidateOrder(CreateOrderDto dto)
+        {
+            if (dto.Items.Count == 0)
+                return "Đơn hàng phải có sản phẩm";
+            if (dto.Items.Any(x => x.Quantity <= 0))
+                return "Số lượng sản phẩm không hợp lệ";
+
+            return null;
+        }
+
+        private static Order CreateOrder(CreateOrderDto dto, int userId, decimal totalAmount)
+        {
+            return new Order
+            {
+                UserId = userId,
+                OrderDate = DateTime.Now,
+                ReceiverName = dto.ReceiverName?.Trim(),
+                ReceiverPhone = dto.ReceiverPhone?.Trim(),
+                ReceiverAddress = dto.ReceiverAddress?.Trim(),
+                Note = dto.Note?.Trim(),
+                PaymentMethod = dto.PaymentMethod?.Trim(),
+                Status = "Chờ xử lý",
+                TotalAmount = totalAmount
+            };
+        }
+
+        private static OrderDetailsResult CreateOrderDetails(List<OrderItemDto> items, List<Product> products)
+        {
+            var result = new OrderDetailsResult();
+
+            foreach (var item in items)
+            {
+                var product = products.First(p => p.ProductId == item.ProductId);
+                var unitPrice = product.DiscountPrice ?? product.Price;
+
+                if (product.StockQuantity.HasValue && product.StockQuantity < item.Quantity)
+                {
+                    result.Error = $"Sản phẩm {product.ProductName} không đủ hàng";
+                    return result;
+                }
+
+                result.Details.Add(new OrderDetail
+                {
+                    ProductId = item.ProductId,
+                    Quantity = item.Quantity,
+                    UnitPrice = unitPrice,
+                    Subtotal = unitPrice * item.Quantity
+                });
+
+                result.TotalAmount += unitPrice * item.Quantity;
+                product.StockQuantity = product.StockQuantity.HasValue ? product.StockQuantity - item.Quantity : null;
+                product.SoldQuantity = (product.SoldQuantity ?? 0) + item.Quantity;
+            }
+
+            return result;
+        }
+    }
+
+    public class OrderDetailsResult
+    {
+        public string? Error { get; set; }
+        public decimal TotalAmount { get; set; }
+        public List<OrderDetail> Details { get; set; } = new();
     }
 }
