@@ -7,6 +7,10 @@
       "RelativeMoniker": "D:0:0:{6A5FAB47-080D-437F-B182-08180FA88898}|FlowerShop\\FlowerShop.csproj|solutionrelative:flowershop\\controllers\\admin\\usercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{6A5FAB47-080D-437F-B182-08180FA88898}|FlowerShop\\FlowerShop.csproj|d:\\user\\downloads\\code\\flowershop\\backend\\flowershop\\flowershop\\common\\tokenhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6A5FAB47-080D-437F-B182-08180FA88898}|FlowerShop\\FlowerShop.csproj|solutionrelative:flowershop\\common\\tokenhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{6A5FAB47-080D-437F-B182-08180FA88898}|FlowerShop\\FlowerShop.csproj|d:\\user\\downloads\\code\\flowershop\\backend\\flowershop\\flowershop\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{6A5FAB47-080D-437F-B182-08180FA88898}|FlowerShop\\FlowerShop.csproj|solutionrelative:flowershop\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
@@ -55,10 +59,6 @@
       "RelativeMoniker": "D:0:0:{6A5FAB47-080D-437F-B182-08180FA88898}|FlowerShop\\FlowerShop.csproj|solutionrelative:flowershop\\data\\flowercontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{6A5FAB47-080D-437F-B182-08180FA88898}|FlowerShop\\FlowerShop.csproj|d:\\user\\downloads\\code\\flowershop\\backend\\flowershop\\flowershop\\common\\tokenhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{6A5FAB47-080D-437F-B182-08180FA88898}|FlowerShop\\FlowerShop.csproj|solutionrelative:flowershop\\common\\tokenhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{6A5FAB47-080D-437F-B182-08180FA88898}|FlowerShop\\FlowerShop.csproj|d:\\user\\downloads\\code\\flowershop\\backend\\flowershop\\flowershop\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{6A5FAB47-080D-437F-B182-08180FA88898}|FlowerShop\\FlowerShop.csproj|solutionrelative:flowershop\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -98,7 +98,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 14,
+          "SelectedChildIndex": 13,
           "Children": [
             {
               "$type": "Bookmark",
@@ -146,19 +146,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "CategoryController.cs",
-              "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin\\CategoryController.cs",
-              "RelativeDocumentMoniker": "FlowerShop\\Controllers\\Admin\\CategoryController.cs",
-              "ToolTip": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin\\CategoryController.cs",
-              "RelativeToolTip": "FlowerShop\\Controllers\\Admin\\CategoryController.cs",
-              "ViewState": "AgIAAEkAAAAAAAAAAAAuwFgAAAA0AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-04T16:08:20.142Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "ProductController.cs",
               "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin\\ProductController.cs",
               "RelativeDocumentMoniker": "FlowerShop\\Controllers\\Admin\\ProductController.cs",
@@ -170,7 +158,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "appsettings.json",
               "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\appsettings.json",
               "RelativeDocumentMoniker": "FlowerShop\\appsettings.json",
@@ -188,14 +176,39 @@
               "RelativeDocumentMoniker": "FlowerShop\\Controllers\\Admin\\UserController.cs",
               "ToolTip": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin\\UserController.cs",
               "RelativeToolTip": "FlowerShop\\Controllers\\Admin\\UserController.cs",
-              "ViewState": "AgIAACQAAAAAAAAAAAAmwDAAAABXAAAAAAAAAA==",
+              "ViewState": "AgIAAA0AAAAAAAAAAAAmwBkAAABgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-05-04T16:08:20.128Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "TokenHelper.cs",
+              "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Common\\TokenHelper.cs",
+              "RelativeDocumentMoniker": "FlowerShop\\Common\\TokenHelper.cs",
+              "ToolTip": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Common\\TokenHelper.cs",
+              "RelativeToolTip": "FlowerShop\\Common\\TokenHelper.cs",
+              "ViewState": "AgIAAAsAAAAAAAAAAAA8wBgAAAAdAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-04T16:08:20.168Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 5,
+              "Title": "CategoryController.cs",
+              "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin\\CategoryController.cs",
+              "RelativeDocumentMoniker": "FlowerShop\\Controllers\\Admin\\CategoryController.cs",
+              "ToolTip": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin\\CategoryController.cs",
+              "RelativeToolTip": "FlowerShop\\Controllers\\Admin\\CategoryController.cs",
+              "ViewState": "AgIAAEkAAAAAAAAAAAAuwFgAAAA0AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-04T16:08:20.142Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "ContactController.cs",
               "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin\\ContactController.cs",
               "RelativeDocumentMoniker": "FlowerShop\\Controllers\\Admin\\ContactController.cs",
@@ -207,7 +220,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "OrderController.cs",
               "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\User\\OrderController.cs",
               "RelativeDocumentMoniker": "FlowerShop\\Controllers\\User\\OrderController.cs",
@@ -219,7 +232,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "ProductController.cs",
               "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\User\\ProductController.cs",
               "RelativeDocumentMoniker": "FlowerShop\\Controllers\\User\\ProductController.cs",
@@ -231,7 +244,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "OrderController.cs",
               "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin\\OrderController.cs",
               "RelativeDocumentMoniker": "FlowerShop\\Controllers\\Admin\\OrderController.cs",
@@ -243,7 +256,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "CategoryController.cs",
               "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\User\\CategoryController.cs",
               "RelativeDocumentMoniker": "FlowerShop\\Controllers\\User\\CategoryController.cs",
@@ -255,7 +268,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "ReviewController.cs",
               "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\User\\ReviewController.cs",
               "RelativeDocumentMoniker": "FlowerShop\\Controllers\\User\\ReviewController.cs",
@@ -267,7 +280,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 11,
               "Title": "BannerController.cs",
               "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\User\\BannerController.cs",
               "RelativeDocumentMoniker": "FlowerShop\\Controllers\\User\\BannerController.cs",
@@ -279,7 +292,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 12,
               "Title": "AuthController.cs",
               "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Controllers\\User\\AuthController.cs",
               "RelativeDocumentMoniker": "FlowerShop\\Controllers\\User\\AuthController.cs",
@@ -291,7 +304,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 13,
               "Title": "FlowerContext.cs",
               "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Data\\FlowerContext.cs",
               "RelativeDocumentMoniker": "FlowerShop\\Data\\FlowerContext.cs",
@@ -300,18 +313,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-05-05T03:56:17.239Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
-              "Title": "TokenHelper.cs",
-              "DocumentMoniker": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Common\\TokenHelper.cs",
-              "RelativeDocumentMoniker": "FlowerShop\\Common\\TokenHelper.cs",
-              "ToolTip": "D:\\User\\Downloads\\Code\\flowershop\\backend\\FlowerShop\\FlowerShop\\Common\\TokenHelper.cs",
-              "RelativeToolTip": "FlowerShop\\Common\\TokenHelper.cs",
-              "ViewState": "AgIAAAwAAAAAAAAAAAAAAF0AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-04T16:08:20.168Z"
             },
             {
               "$type": "Document",
