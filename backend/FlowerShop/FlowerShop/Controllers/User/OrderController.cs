@@ -10,8 +10,8 @@ namespace FlowerShop.Controllers.Api
     {
         public int ProductId { get; set; }
         public int Quantity { get; set; }
-        public decimal Price { get; set; }
     }
+
     public class CreateOrderDto
     {
         public string? ReceiverName { get; set; }
@@ -90,28 +90,29 @@ namespace FlowerShop.Controllers.Api
                 .Include(o => o.OrderDetails).ThenInclude(od => od.Product)
                 .Where(o => o.UserId == userId.Value)
                 .OrderByDescending(o => o.OrderDate)
-                .Select(o => new {
-                    o.OrderId,
-                    o.OrderDate,
-                    o.TotalAmount,
-                    o.Status,
-                    CustomerName = o.User != null ? o.User.FullName : null,
-                    o.ReceiverName,
-                    o.ReceiverPhone,
-                    o.ReceiverAddress,
-                    o.PaymentMethod,
-                    o.Note,
-                    ItemsCount = o.OrderDetails.Count,
-                    Items = o.OrderDetails.Select(od => new
+                .Select(order => new MyOrderDto
+                {
+                    OrderId = order.OrderId,
+                    OrderDate = order.OrderDate,
+                    TotalAmount = order.TotalAmount,
+                    Status = order.Status,
+                    CustomerName = order.User != null ? order.User.FullName : null,
+                    ReceiverName = order.ReceiverName,
+                    ReceiverPhone = order.ReceiverPhone,
+                    ReceiverAddress = order.ReceiverAddress,
+                    PaymentMethod = order.PaymentMethod,
+                    Note = order.Note,
+                    ItemsCount = order.OrderDetails.Count,
+                    Items = order.OrderDetails.Select(detail => new MyOrderItemDto
                     {
-                        od.OrderDetailId,
-                        od.ProductId,
-                        ProductName = od.Product != null ? od.Product.ProductName : "",
-                        ImageUrl = od.Product != null ? od.Product.ImageUrl : null,
-                        od.Quantity,
-                        Price = od.UnitPrice,
-                        od.Subtotal
-                    })
+                        OrderDetailId = detail.OrderDetailId,
+                        ProductId = detail.ProductId,
+                        ProductName = detail.Product != null ? detail.Product.ProductName : "",
+                        ImageUrl = detail.Product != null ? detail.Product.ImageUrl : null,
+                        Quantity = detail.Quantity,
+                        Price = detail.UnitPrice,
+                        Subtotal = detail.Subtotal
+                    }).ToList()
                 })
                 .ToListAsync();
 
@@ -181,5 +182,32 @@ namespace FlowerShop.Controllers.Api
         public string? Error { get; set; }
         public decimal TotalAmount { get; set; }
         public List<OrderDetail> Details { get; set; } = new();
+    }
+
+    public class MyOrderDto
+    {
+        public int OrderId { get; set; }
+        public DateTime? OrderDate { get; set; }
+        public decimal? TotalAmount { get; set; }
+        public string? Status { get; set; }
+        public string? CustomerName { get; set; }
+        public string? ReceiverName { get; set; }
+        public string? ReceiverPhone { get; set; }
+        public string? ReceiverAddress { get; set; }
+        public string? PaymentMethod { get; set; }
+        public string? Note { get; set; }
+        public int ItemsCount { get; set; }
+        public List<MyOrderItemDto> Items { get; set; } = new();
+    }
+
+    public class MyOrderItemDto
+    {
+        public int OrderDetailId { get; set; }
+        public int? ProductId { get; set; }
+        public string ProductName { get; set; } = "";
+        public string? ImageUrl { get; set; }
+        public int Quantity { get; set; }
+        public decimal Price { get; set; }
+        public decimal? Subtotal { get; set; }
     }
 }

@@ -9,6 +9,7 @@ namespace FlowerShop.Controllers.User
     public class ProductController : ControllerBase
     {
         private readonly FlowerContext _context;
+
         public ProductController(FlowerContext context)
         {
             _context = context;
@@ -24,46 +25,10 @@ namespace FlowerShop.Controllers.User
             [FromQuery] string? rating = null,
             [FromQuery] string? sort = null)
         {
-            var query = _context.Products
-                .Include(p => p.Images)
-                .Include(p => p.Reviews)
-                .Where(p => p.IsActive == true);
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
 
-            if (!string.IsNullOrEmpty(category) && int.TryParse(category, out int catId))
-            {
-                query = query.Where(p => p.CategoryId == catId);
-            }
-
-            if (!string.IsNullOrEmpty(search))
-            {
-                var keyword = search.ToLower();
-                query = query.Where(p => p.ProductName.ToLower().Contains(keyword));
-            }
-
-            if (!string.IsNullOrEmpty(priceRange))
-            {
-                var parts = priceRange.Split('-');
-                if (parts.Length == 2 &&
-                    decimal.TryParse(parts[0], out decimal minPrice) &&
-                    decimal.TryParse(parts[1], out decimal maxPrice))
-                {
-                    query = query.Where(p => (p.DiscountPrice ?? p.Price) >= minPrice && (p.DiscountPrice ?? p.Price) <= maxPrice);
-                }
-            }
-
-            if (!string.IsNullOrEmpty(rating) && int.TryParse(rating, out int minRating))
-            {
-                query = query.Where(p => p.Reviews.Any(r => r.Rating.HasValue) &&
-                            p.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value) >= minRating);
-            }
-
-            query = sort switch
-            {
-                "price_asc" => query.OrderBy(p => p.DiscountPrice ?? p.Price),
-                "price_desc" => query.OrderByDescending(p => p.DiscountPrice ?? p.Price),
-                "sold" => query.OrderByDescending(p => p.SoldQuantity),
-                _ => query.OrderByDescending(p => p.CreatedDate)
-            };
+            var query = BuildProductQuery(category, search, priceRange, rating, sort);
 
             var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
@@ -71,21 +36,29 @@ namespace FlowerShop.Controllers.User
             var items = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(p => new
+                .Select(product => new ProductListItemDto
                 {
-                    productId = p.ProductId,
-                    productName = p.ProductName,
-                    price = p.Price,
-                    sale = p.DiscountPrice,
-                    imageUrl = p.Images.OrderByDescending(i => i.IsMain).ThenBy(i => i.Id).Select(i => i.ImageUrl).FirstOrDefault() ?? p.ImageUrl,
-                    categoryId = p.CategoryId,
-                    rating = p.Reviews.Any(r => r.Rating.HasValue) ? Math.Round(p.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value), 1) : 0,
-                    reviewCount = p.Reviews.Count,
-                    soldQuantity = p.SoldQuantity,
-                    stockQuantity = p.StockQuantity,
-                    isFeatured = p.IsFeatured,
-                    createdDate = p.CreatedDate,
-                    isNew = p.CreatedDate != null && p.CreatedDate >= DateTime.Now.AddDays(-7)
+                    ProductId = product.ProductId,
+                    ProductName = product.ProductName,
+                    Price = product.Price,
+                    Sale = product.DiscountPrice,
+                    ImageUrl = product.Images
+                        .OrderByDescending(image => image.IsMain)
+                        .ThenBy(image => image.Id)
+                        .Select(image => image.ImageUrl)
+                        .FirstOrDefault() ?? product.ImageUrl,
+                    CategoryId = product.CategoryId,
+                    Rating = product.Reviews.Any(review => review.Rating.HasValue)
+                        ? Math.Round(product.Reviews
+                            .Where(review => review.Rating.HasValue)
+                            .Average(review => (double)review.Rating!.Value), 1)
+                        : 0,
+                    ReviewCount = product.Reviews.Count,
+                    SoldQuantity = product.SoldQuantity,
+                    StockQuantity = product.StockQuantity,
+                    IsFeatured = product.IsFeatured,
+                    CreatedDate = product.CreatedDate,
+                    IsNew = IsNew(product)
                 })
                 .ToListAsync();
 
@@ -107,33 +80,99 @@ namespace FlowerShop.Controllers.User
             return Ok(ToProductDetail(product));
         }
 
-        private static object ToProductDetail(Product product)
+        private IQueryable<Product> BuildProductQuery(string? category, string? search, string? priceRange, string? rating, string? sort)
         {
-            return new
+            var query = _context.Products
+                .AsNoTracking()
+                .Include(product => product.Images)
+                .Include(product => product.Reviews)
+                .Where(product => product.IsActive == true);
+
+            query = FilterByCategory(query, category);
+            query = FilterBySearch(query, search);
+            query = FilterByPrice(query, priceRange);
+            query = FilterByRating(query, rating);
+
+            return SortProducts(query, sort);
+        }
+
+        private static IQueryable<Product> FilterByCategory(IQueryable<Product> query, string? category)
+        {
+            if (!int.TryParse(category, out var categoryId)) return query;
+            return query.Where(product => product.CategoryId == categoryId);
+        }
+
+        private static IQueryable<Product> FilterBySearch(IQueryable<Product> query, string? search)
+        {
+            if (string.IsNullOrWhiteSpace(search)) return query;
+
+            var keyword = search.Trim().ToLower();
+            return query.Where(product => product.ProductName.ToLower().Contains(keyword));
+        }
+
+        private static IQueryable<Product> FilterByPrice(IQueryable<Product> query, string? priceRange)
+        {
+            if (string.IsNullOrWhiteSpace(priceRange)) return query;
+
+            var parts = priceRange.Split('-');
+            if (parts.Length != 2) return query;
+            if (!decimal.TryParse(parts[0], out var minPrice)) return query;
+            if (!decimal.TryParse(parts[1], out var maxPrice)) return query;
+
+            return query.Where(product =>
+                (product.DiscountPrice ?? product.Price) >= minPrice &&
+                (product.DiscountPrice ?? product.Price) <= maxPrice);
+        }
+
+        private static IQueryable<Product> FilterByRating(IQueryable<Product> query, string? rating)
+        {
+            if (!int.TryParse(rating, out var minRating)) return query;
+
+            return query.Where(product =>
+                product.Reviews.Any(review => review.Rating.HasValue) &&
+                product.Reviews
+                    .Where(review => review.Rating.HasValue)
+                    .Average(review => (double)review.Rating!.Value) >= minRating);
+        }
+
+        private static IQueryable<Product> SortProducts(IQueryable<Product> query, string? sort)
+        {
+            return sort switch
             {
-                productId = product.ProductId,
-                id = product.ProductId,
-                name = product.ProductName,
-                desc = product.Description,
-                price = product.Price,
-                sale = product.DiscountPrice,
-                imageUrl = GetMainImage(product),
-                images = GetImages(product),
-                cat = product.CategoryId,
-                categoryName = product.Category?.CategoryName,
-                rating = product.Rating ?? 0,
-                soldQuantity = product.SoldQuantity,
-                stockQuantity = product.StockQuantity,
-                isFeatured = product.IsFeatured,
-                isNew = IsNew(product),
-                reviews = product.Reviews.Select(r => new
+                "price_asc" => query.OrderBy(product => product.DiscountPrice ?? product.Price),
+                "price_desc" => query.OrderByDescending(product => product.DiscountPrice ?? product.Price),
+                "sold" => query.OrderByDescending(product => product.SoldQuantity),
+                _ => query.OrderByDescending(product => product.CreatedDate)
+            };
+        }
+
+        private static ProductDetailDto ToProductDetail(Product product)
+        {
+            return new ProductDetailDto
+            {
+                ProductId = product.ProductId,
+                Id = product.ProductId,
+                Name = product.ProductName,
+                Desc = product.Description,
+                Price = product.Price,
+                Sale = product.DiscountPrice,
+                ImageUrl = GetMainImage(product),
+                Images = GetImages(product),
+                Cat = product.CategoryId,
+                CategoryName = product.Category?.CategoryName,
+                Rating = product.Rating ?? 0,
+                SoldQuantity = product.SoldQuantity,
+                StockQuantity = product.StockQuantity,
+                IsFeatured = product.IsFeatured,
+                IsNew = IsNew(product),
+                Reviews = product.Reviews.Select(review => new ProductReviewDto
                 {
-                    id = r.ReviewId,
-                    rating = r.Rating,
-                    comment = r.Comment,
-                    createdAt = r.CreatedDate,
-                    userName = r.User?.FullName ?? "Ẩn danh"
-                }).OrderByDescending(r => r.createdAt).ToList()
+                    Id = review.ReviewId,
+                    Rating = review.Rating,
+                    Comment = review.Comment,
+                    CreatedAt = review.CreatedDate,
+                    UserName = review.User?.FullName ?? "Ẩn danh"
+                }).OrderByDescending(review => review.CreatedAt).ToList()
             };
         }
 
@@ -164,6 +203,53 @@ namespace FlowerShop.Controllers.User
                 })
                 .ToList();
         }
+
+    }
+
+    public class ProductListItemDto
+    {
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = "";
+        public decimal Price { get; set; }
+        public decimal? Sale { get; set; }
+        public string? ImageUrl { get; set; }
+        public int? CategoryId { get; set; }
+        public double Rating { get; set; }
+        public int ReviewCount { get; set; }
+        public int? SoldQuantity { get; set; }
+        public int? StockQuantity { get; set; }
+        public bool? IsFeatured { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public bool IsNew { get; set; }
+    }
+
+    public class ProductDetailDto
+    {
+        public int ProductId { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string? Desc { get; set; }
+        public decimal Price { get; set; }
+        public decimal? Sale { get; set; }
+        public string? ImageUrl { get; set; }
+        public List<ProductImageDto> Images { get; set; } = new();
+        public int? Cat { get; set; }
+        public string? CategoryName { get; set; }
+        public decimal Rating { get; set; }
+        public int? SoldQuantity { get; set; }
+        public int? StockQuantity { get; set; }
+        public bool? IsFeatured { get; set; }
+        public bool IsNew { get; set; }
+        public List<ProductReviewDto> Reviews { get; set; } = new();
+    }
+
+    public class ProductReviewDto
+    {
+        public int Id { get; set; }
+        public int? Rating { get; set; }
+        public string? Comment { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public string UserName { get; set; } = "";
     }
 
     public class ProductImageDto

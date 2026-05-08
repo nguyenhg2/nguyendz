@@ -22,65 +22,30 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetAll([FromQuery] OrderSearchParams f)
         {
             var paging = PagingHelper.Normalize(f.Page, f.Limit);
-            var q = _context.Orders.AsNoTracking().Include(o => o.User).AsQueryable();
-
-            if (!string.IsNullOrEmpty(f.Status))
-                q = q.Where(o => o.Status == f.Status);
-            if (!string.IsNullOrEmpty(f.Search))
-                q = q.Where(o =>
-                    (o.ReceiverName ?? "").Contains(f.Search)
-                    || (o.ReceiverPhone ?? "").Contains(f.Search));
-            if (f.FromDate.HasValue)
-                q = q.Where(o => o.OrderDate >= f.FromDate);
-            if (f.ToDate.HasValue)
-                q = q.Where(o => o.OrderDate <= f.ToDate);
-            if (!string.IsNullOrEmpty(f.PaymentMethod))
-            {
-                var payment = NormalizePaymentMethod(f.PaymentMethod);
-                if (payment == "banktransfer")
-                {
-                    q = q.Where(o =>
-                        o.PaymentMethod != null &&
-                        (o.PaymentMethod == "BankTransfer"
-                         || o.PaymentMethod == "bank"
-                         || o.PaymentMethod == "banktransfer"
-                         || o.PaymentMethod.Contains("Chuyển")
-                         || o.PaymentMethod.Contains("chuyển")
-                         || o.PaymentMethod.Contains("khoản")
-                         || o.PaymentMethod.Contains("khoan")));
-                }
-                else if (payment == "cod")
-                {
-                    q = q.Where(o => o.PaymentMethod != null && o.PaymentMethod.ToLower() == "cod");
-                }
-                else
-                {
-                    q = q.Where(o => o.PaymentMethod == f.PaymentMethod);
-                }
-            }
+            var q = BuildOrderQuery(f);
 
             var total = await q.CountAsync();
             var totalPages = (int)Math.Ceiling((double)total / paging.Limit);
             var items = await q.OrderByDescending(o => o.OrderDate)
                 .Skip((paging.Page - 1) * paging.Limit)
                 .Take(paging.Limit)
-                .Select(o => new
+                .Select(order => new AdminOrderListItemDto
                 {
-                    o.OrderId,
-                    o.OrderDate,
-                    o.TotalAmount,
-                    TotalPrice = o.TotalAmount,
-                    Total = o.TotalAmount,
-                    o.Status,
-                    CustomerName = o.User != null ? o.User.FullName : null,
-                    UserName = o.User != null ? o.User.FullName : null,
-                    o.ReceiverName,
-                    o.ReceiverPhone,
-                    o.ReceiverAddress,
-                    ShippingAddress = o.ReceiverAddress,
-                    Address = o.ReceiverAddress,
-                    o.PaymentMethod,
-                    o.Note
+                    OrderId = order.OrderId,
+                    OrderDate = order.OrderDate,
+                    TotalAmount = order.TotalAmount,
+                    TotalPrice = order.TotalAmount,
+                    Total = order.TotalAmount,
+                    Status = order.Status,
+                    CustomerName = order.User != null ? order.User.FullName : null,
+                    UserName = order.User != null ? order.User.FullName : null,
+                    ReceiverName = order.ReceiverName,
+                    ReceiverPhone = order.ReceiverPhone,
+                    ReceiverAddress = order.ReceiverAddress,
+                    ShippingAddress = order.ReceiverAddress,
+                    Address = order.ReceiverAddress,
+                    PaymentMethod = order.PaymentMethod,
+                    Note = order.Note
                 })
                 .ToListAsync();
 
@@ -96,34 +61,35 @@ namespace FlowerShop.Controllers.Admin
                 .Include(o => o.OrderDetails).ThenInclude(od => od.Product)
                 .FirstOrDefaultAsync(o => o.OrderId == id);
             if (order == null) return NotFound();
-            return Ok(new
+
+            return Ok(new AdminOrderDetailDto
             {
-                order.OrderId,
-                order.OrderDate,
-                order.TotalAmount,
+                OrderId = order.OrderId,
+                OrderDate = order.OrderDate,
+                TotalAmount = order.TotalAmount,
                 TotalPrice = order.TotalAmount,
                 Total = order.TotalAmount,
-                order.Status,
+                Status = order.Status,
                 CustomerName = order.User?.FullName,
                 UserName = order.User?.FullName,
-                order.ReceiverName,
-                order.ReceiverPhone,
-                order.ReceiverAddress,
+                ReceiverName = order.ReceiverName,
+                ReceiverPhone = order.ReceiverPhone,
+                ReceiverAddress = order.ReceiverAddress,
                 ShippingAddress = order.ReceiverAddress,
                 Address = order.ReceiverAddress,
-                order.PaymentMethod,
-                order.Note,
-                OrderDetails = order.OrderDetails.Select(od => new
+                PaymentMethod = order.PaymentMethod,
+                Note = order.Note,
+                OrderDetails = order.OrderDetails.Select(detail => new AdminOrderItemDto
                 {
-                    od.OrderDetailId,
-                    od.ProductId,
-                    ProductName = od.Product?.ProductName,
-                    ImageUrl = od.Product?.ImageUrl,
-                    od.Quantity,
-                    Price = od.UnitPrice,
-                    od.UnitPrice,
-                    od.Subtotal
-                })
+                    OrderDetailId = detail.OrderDetailId,
+                    ProductId = detail.ProductId,
+                    ProductName = detail.Product?.ProductName,
+                    ImageUrl = detail.Product?.ImageUrl,
+                    Quantity = detail.Quantity,
+                    Price = detail.UnitPrice,
+                    UnitPrice = detail.UnitPrice,
+                    Subtotal = detail.Subtotal
+                }).ToList()
             });
         }
 
@@ -162,6 +128,40 @@ namespace FlowerShop.Controllers.Admin
             return Ok(new { success = true });
         }
 
+        private IQueryable<Order> BuildOrderQuery(OrderSearchParams f)
+        {
+            var query = _context.Orders.AsNoTracking().Include(order => order.User).AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(f.Status))
+                query = query.Where(order => order.Status == f.Status);
+
+            if (!string.IsNullOrWhiteSpace(f.Search))
+            {
+                var keyword = f.Search.Trim();
+                query = query.Where(order =>
+                    (order.ReceiverName ?? "").Contains(keyword) ||
+                    (order.ReceiverPhone ?? "").Contains(keyword));
+            }
+
+            if (f.FromDate.HasValue)
+                query = query.Where(order => order.OrderDate >= f.FromDate);
+
+            if (f.ToDate.HasValue)
+                query = query.Where(order => order.OrderDate <= f.ToDate);
+
+            return FilterByPayment(query, f.PaymentMethod);
+        }
+
+        private static IQueryable<Order> FilterByPayment(IQueryable<Order> query, string? paymentMethod)
+        {
+            if (string.IsNullOrWhiteSpace(paymentMethod)) return query;
+
+            var payment = NormalizePaymentMethod(paymentMethod);
+            return payment == "cod"
+                ? query.Where(order => order.PaymentMethod != null && order.PaymentMethod.ToLower() == "cod")
+                : query.Where(order => order.PaymentMethod != null && order.PaymentMethod.ToLower() != "cod");
+        }
+
         private static string NormalizePaymentMethod(string? value)
         {
             if (string.IsNullOrWhiteSpace(value)) return "";
@@ -171,11 +171,7 @@ namespace FlowerShop.Controllers.Admin
                 .Replace("_", "")
                 .Replace("-", "");
 
-            if (normalized == "cod" || normalized.Contains("cash")) return "cod";
-            if (normalized == "bank" || normalized == "banktransfer" || normalized.Contains("chuyen") || normalized.Contains("chuyển") || normalized.Contains("khoan") || normalized.Contains("khoản"))
-                return "banktransfer";
-
-            return normalized;
+            return normalized == "cod" ? "cod" : "payment";
         }
     }
 
@@ -207,4 +203,40 @@ namespace FlowerShop.Controllers.Admin
 
     public class StatusUpdateDto { public string Status { get; set; } = ""; }
     public class CancelRequestDto { public string Reason { get; set; } = ""; }
+
+    public class AdminOrderListItemDto
+    {
+        public int OrderId { get; set; }
+        public DateTime? OrderDate { get; set; }
+        public decimal? TotalAmount { get; set; }
+        public decimal? TotalPrice { get; set; }
+        public decimal? Total { get; set; }
+        public string? Status { get; set; }
+        public string? CustomerName { get; set; }
+        public string? UserName { get; set; }
+        public string? ReceiverName { get; set; }
+        public string? ReceiverPhone { get; set; }
+        public string? ReceiverAddress { get; set; }
+        public string? ShippingAddress { get; set; }
+        public string? Address { get; set; }
+        public string? PaymentMethod { get; set; }
+        public string? Note { get; set; }
+    }
+
+    public class AdminOrderDetailDto : AdminOrderListItemDto
+    {
+        public List<AdminOrderItemDto> OrderDetails { get; set; } = new();
+    }
+
+    public class AdminOrderItemDto
+    {
+        public int OrderDetailId { get; set; }
+        public int? ProductId { get; set; }
+        public string? ProductName { get; set; }
+        public string? ImageUrl { get; set; }
+        public int Quantity { get; set; }
+        public decimal Price { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal? Subtotal { get; set; }
+    }
 }
