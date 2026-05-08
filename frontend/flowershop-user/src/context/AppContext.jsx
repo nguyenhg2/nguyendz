@@ -51,7 +51,7 @@ const buildUrl = (page, params = {}) => {
   }
 };
 
-export function AppProvider({children}) {
+export function AppProvider({ children }) {
   const initialRoute = parseRoute();
   const [page, setPage] = useState(initialRoute.page);
   const [pageParams, setPageParams] = useState(initialRoute.params);
@@ -91,23 +91,28 @@ export function AppProvider({children}) {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  const navigate = (p, params={}) => {
+  const navigate = (p, params = {}) => {
     setPage(p);
     setPageParams(params);
     const url = buildUrl(p, params);
     if (`${window.location.pathname}${window.location.search}` !== url) {
       window.history.pushState({}, '', url);
     }
-    window.scrollTo(0,0);
+    window.scrollTo(0, 0);
   };
-  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(null), 2500); };
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
 
-  // ← FIX: normalize id và imageUrl khi thêm vào giỏ
-  const addToCart = (product, qty=1) => {
+  const addToCart = (product, qty = 1) => {
     const id = product.productId || product.id;
+    const stock = product.stockQuantity || 0;
+    if (stock === 0) { showToast('Sản phẩm đã hết hàng'); return; }
     setCart(c => {
       const ex = c.find(i => i.id === id);
-      if (ex) return c.map(i => i.id === id ? {...i, qty: i.qty + qty} : i);
+      if (ex) {
+        const newQty = Math.min(ex.qty + qty, stock);
+        if (newQty === ex.qty) { showToast('Đã đạt số lượng tối đa trong kho'); return c; }
+        return c.map(i => i.id === id ? { ...i, qty: newQty } : i);
+      }
       return [...c, {
         id,
         productId: id,
@@ -115,7 +120,8 @@ export function AppProvider({children}) {
         imageUrl: product.imageUrl || product.img || null,
         price: product.price,
         sale: product.sale || product.discountPrice || null,
-        qty
+        stockQuantity: stock,
+        qty: Math.min(qty, stock)
       }];
     });
     showToast('Đã thêm vào giỏ hàng');
@@ -123,12 +129,16 @@ export function AppProvider({children}) {
 
   const updateCart = (id, qty) => {
     if (qty <= 0) { setCart(c => c.filter(i => i.id !== id)); return; }
-    setCart(c => c.map(i => i.id === id ? {...i, qty} : i));
+    setCart(c => c.map(i => {
+      if (i.id !== id) return i;
+      const maxQty = i.stockQuantity || 999;
+      return { ...i, qty: Math.min(qty, maxQty) };
+    }));
   };
   const clearCart = () => setCart([]);
 
-  const cartTotal = cart.reduce((s,i) => s + (i.sale || i.price) * i.qty, 0);
-  const cartCount = cart.reduce((s,i) => s + i.qty, 0);
+  const cartTotal = cart.reduce((s, i) => s + (i.sale || i.price) * i.qty, 0);
+  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   return (
     <AppContext.Provider value={{
