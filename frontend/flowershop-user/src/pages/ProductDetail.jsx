@@ -42,7 +42,7 @@ export function ProductDetailPage() {
         setSelectedImage(productData.images?.[0]?.imageUrl || productData.imageUrl || '');
         setQty(1);
 
-        const relatedRes = await getProducts({ cat: productData.cat || productData.categoryId });
+        const relatedRes = await getProducts({ category: productData.categoryId });
         const relatedItems = relatedRes.data.items || relatedRes.data || [];
         setRelated(
           relatedItems

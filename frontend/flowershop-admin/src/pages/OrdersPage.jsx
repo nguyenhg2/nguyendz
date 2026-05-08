@@ -129,7 +129,7 @@ export default function OrdersPage() {
 
   const openDetail = async (id) => {
     try {
-      const res = await orderAPI.getDetail(id);
+      const res = await orderAPI.getById(id);
       setDetail(res.data);
     } catch {
       showToast('Lỗi tải chi tiết', 'error');
