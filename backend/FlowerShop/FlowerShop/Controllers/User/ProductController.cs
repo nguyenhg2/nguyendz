@@ -17,33 +17,85 @@ namespace FlowerShop.Controllers.User
 
         [HttpGet]
         public async Task<IActionResult> GetProducts(
-            [FromQuery] int? cat, [FromQuery] string? sort,
-            [FromQuery] int page = 1, [FromQuery] int pageSize = 12,
-            [FromQuery] string? q = null, [FromQuery] string? priceRange = null)
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12,
+            [FromQuery] string? category = null,
+            [FromQuery] string? search = null,
+            [FromQuery] string? priceRange = null,
+            [FromQuery] string? rating = null,
+            [FromQuery] string? sort = null)
         {
-            (page, pageSize) = PagingHelper.Normalize(page, pageSize, defaultLimit: 12);
-
             var query = _context.Products
-                .AsNoTracking()
                 .Include(p => p.Images)
-                .Where(p => p.IsActive == true)
-                .AsQueryable();
+                .Include(p => p.Reviews)
+                .Where(p => p.IsActive);
 
-            query = ApplyFilters(query, cat, q, priceRange);
-            query = ApplySort(query, sort);
+            // Filter theo danh mục
+            if (!string.IsNullOrEmpty(category) && int.TryParse(category, out int catId))
+            {
+                query = query.Where(p => p.CategoryId == catId);
+            }
+
+            // Filter theo từ khóa
+            if (!string.IsNullOrEmpty(search))
+            {
+                var keyword = search.ToLower();
+                query = query.Where(p => p.ProductName.ToLower().Contains(keyword));
+            }
+
+            // Filter theo khoảng giá
+            if (!string.IsNullOrEmpty(priceRange))
+            {
+                var parts = priceRange.Split('-');
+                if (parts.Length == 2 &&
+                    decimal.TryParse(parts[0], out decimal minPrice) &&
+                    decimal.TryParse(parts[1], out decimal maxPrice))
+                {
+                    query = query.Where(p => (p.Sale ?? p.Price) >= minPrice && (p.Sale ?? p.Price) <= maxPrice);
+                }
+            }
+
+            // Filter theo đánh giá
+            if (!string.IsNullOrEmpty(rating) && int.TryParse(rating, out int minRating))
+            {
+                query = query.Where(p => p.Reviews.Any() &&
+                            p.Reviews.Average(r => r.Rating) >= minRating);
+            }
+
+            // Sắp xếp
+            query = sort switch
+            {
+                "price_asc" => query.OrderBy(p => p.Sale ?? p.Price),
+                "price_desc" => query.OrderByDescending(p => p.Sale ?? p.Price),
+                "sold" => query.OrderByDescending(p => p.SoldQuantity),
+                _ => query.OrderByDescending(p => p.CreatedDate)
+            };
 
             var totalItems = await query.CountAsync();
-            var products = await query
+            var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+            var items = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
+                .Select(p => new
+                {
+                    productId = p.ProductId,
+                    productName = p.ProductName,
+                    price = p.Price,
+                    sale = p.Sale,
+                    imageUrl = GetMainImage(p),
+                    categoryId = p.CategoryId,
+                    rating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => r.Rating), 1) : 0,
+                    reviewCount = p.Reviews.Count,
+                    soldQuantity = p.SoldQuantity,
+                    stockQuantity = p.StockQuantity,
+                    isFeatured = p.IsFeatured,
+                    createdDate = p.CreatedDate,
+                    isNew = p.CreatedDate >= DateTime.Now.AddDays(-7)
+                })
                 .ToListAsync();
 
-            return Ok(new
-            {
-                totalItems,
-                totalPages = (int)Math.Ceiling(totalItems / (double)pageSize),
-                items = products.Select(ToProductItem)
-            });
+            return Ok(new { totalItems, totalPages, items });
         }
 
         [HttpGet("{id}")]
@@ -86,6 +138,8 @@ namespace FlowerShop.Controllers.User
 
             return query;
         }
+
+        
 
         private static IQueryable<Product> ApplySort(IQueryable<Product> query, string? sort)
         {

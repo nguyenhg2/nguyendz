@@ -1,203 +1,247 @@
-import { useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { getProducts, getCategories } from '../services/api'; 
+import { getCategories, getProducts } from '../services/api';
 import ProductCard from '../components/ProductCard';
 
-export function CategoryPage() {
-  const { pageParams, navigate } = useContext(AppContext);
-  
-  // State quản lý dữ liệu từ API
-  const [categories, setCategories] = useState([]); 
-  const [products, setProducts] = useState([]); 
+export default function CategoryPage() {
+  const { navigate, pageParams } = useContext(AppContext);
+  const categoryId = pageParams?.id || '';
+
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // State quản lý phân trang và lọc (Đồng bộ với Backend)
-  const [sort, setSort] = useState(pageParams.sort || 'newest');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [sort, setSort] = useState('newest');
+  const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  
-  const PER_PAGE = 12; // Số lượng sản phẩm trên mỗi trang
-  const cat = pageParams.cat; // ID danh mục lấy từ URL thông qua Context
+  const [priceRange, setPriceRange] = useState('');
+  const [ratingFilter, setRatingFilter] = useState('');
 
-  // 1. Lấy danh sách danh mục hoa khi component khởi tạo
+  const pageSize = 12;
+
+  // Load danh mục
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await getCategories();
-        // Backend trả về dạng { items: [...], totalItems: x }
-        const data = response.data.items || response.data || [];
-        setCategories(data);
-      } catch (error) {
-        console.error("Lỗi khi lấy danh mục:", error);
-        setCategories([]);
-      }
-    };
-    fetchCategories();
+    getCategories().then(res => {
+      setCategories(res.data.items || res.data || []);
+    }).catch(() => {});
   }, []);
 
-  // 2. Lấy danh sách sản phẩm theo Category, Sort và Page
+  // Load sản phẩm
   useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        // Gửi tham số lên Server để thực hiện Skip/Take trong SQL
-        const response = await getProducts({ 
-          cat, 
-          sort, 
-          page: currentPage, 
-          pageSize: PER_PAGE 
-        });
+    loadProducts();
+  }, [categoryId, sort, page, priceRange, ratingFilter]);
 
-        // Backend trả về object: { items: [], totalPages: x, totalItems: y }
-        const { items, totalPages: tPages, totalItems: tItems } = response.data;
-        
-        setProducts(items || []);
-        setTotalPages(tPages || 1);
-        setTotalItems(tItems || 0);
-      } catch (error) {
-        console.error("Lỗi khi lấy sản phẩm:", error);
-        setProducts([]);
-      } finally {
-        setLoading(false);
+  const loadProducts = async () => {
+    setLoading(true);
+    try {
+      const params = { page, pageSize };
+      if (categoryId) params.category = categoryId;
+      if (priceRange) params.priceRange = priceRange;
+      if (ratingFilter) params.rating = ratingFilter;
+
+      switch (sort) {
+        case 'price_asc': params.sort = 'price_asc'; break;
+        case 'price_desc': params.sort = 'price_desc'; break;
+        case 'sold': params.sort = 'sold'; break;
+        default: params.sort = 'newest';
       }
-    };
-    fetchProducts();
-  }, [cat, sort, currentPage]); 
 
-  // Tìm thông tin danh mục hiện tại để hiển thị tiêu đề (Sử dụng Optional Chaining để an toàn)
-  const catInfo = Array.isArray(categories) 
-    ? categories.find(c => (c.id || c.categoryId) === cat) 
-    : null;
+      const res = await getProducts(params);
+      const data = res.data;
+      setProducts(data.items || data || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalItems(data.totalItems || 0);
+    } catch {
+      setProducts([]);
+    }
+    setLoading(false);
+  };
+
+  const currentCategory = categories.find(c =>
+    String(c.categoryId || c.id) === String(categoryId)
+  );
+
+  const handleCategoryClick = (id) => {
+    navigate('category', { id });
+    setPage(1);
+    setPriceRange('');
+    setRatingFilter('');
+  };
+
+  const handleSort = (s) => {
+    setSort(s);
+    setPage(1);
+  };
+
+  const handlePriceChange = (value) => {
+    setPriceRange(value);
+    setPage(1);
+  };
+
+  const handleRatingChange = (value) => {
+    setRatingFilter(value);
+    setPage(1);
+  };
 
   return (
-    <div className="page">
-      {/* Banner Tiêu đề Trang */}
-      <div style={{ background: 'var(--warm)', padding: '28px 0', marginBottom: 28 }}>
-        <div className="container">
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 4 }}>
-            <span style={{ cursor: 'pointer' }} onClick={() => navigate('home')}>Trang chủ</span> › {catInfo ? (catInfo.name || catInfo.categoryName) : 'Tất cả sản phẩm'}
-          </div>
-          <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 28 }}>
-            {catInfo ? `🌸 ${catInfo.name || catInfo.categoryName}` : '🌸 Tất cả sản phẩm'}
-          </div>
-          <div style={{ fontSize: 14, color: 'var(--muted)', marginTop: 4 }}>
-            {loading ? 'Đang tải...' : `${totalItems} sản phẩm`}
-          </div>
-        </div>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px 16px' }}>
+      {/* Header */}
+      <div style={{ marginBottom: 20, padding: 20, background: '#f8f9fa', borderRadius: 10 }}>
+        <h2 style={{ margin: 0, fontSize: 22 }}>
+          {currentCategory?.categoryName || currentCategory?.name || 'Tất cả sản phẩm'}
+        </h2>
+        <p style={{ margin: '8px 0 0', color: '#666', fontSize: 14 }}>{totalItems} sản phẩm</p>
       </div>
 
-      <div className="container" style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 28, alignItems: 'start' }}>
-        
-        {/* Sidebar: Danh mục hoa */}
-        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--border)', padding: 20, position: 'sticky', top: 80 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 16 }}>🔽 Danh mục</div>
-          <div>
-            {Array.isArray(categories) && categories.map(c => {
-              const cId = c.id || c.categoryId;
-              const cName = c.name || c.categoryName;
+      <div style={{ display: 'flex', gap: 24 }}>
+        {/* Sidebar */}
+        <div style={{ width: 220, flexShrink: 0 }}>
+
+          {/* Danh mục */}
+          <div style={sidebarBox}>
+            <h4 style={sidebarTitle}>Danh mục</h4>
+            <div
+              onClick={() => handleCategoryClick('')}
+              style={{ ...sidebarItem, fontWeight: !categoryId ? 700 : 400, color: !categoryId ? '#e91e63' : '#333' }}
+            >
+              Tất cả
+            </div>
+            {categories.map(c => {
+              const cId = String(c.categoryId || c.id);
+              const active = cId === String(categoryId);
               return (
-                <div key={cId} 
-                  onClick={() => { 
-                    navigate('category', { cat: cId }); 
-                    setCurrentPage(1); // Reset về trang 1 khi đổi loại hoa
-                  }} 
-                  style={{ 
-                    padding: '8px 12px', 
-                    borderRadius: 8, 
-                    cursor: 'pointer', 
-                    fontSize: 14, 
-                    background: cat === cId ? 'var(--rose-light)' : '', 
-                    color: cat === cId ? 'var(--rose)' : 'var(--text)', 
-                    fontWeight: cat === cId ? 700 : 400, 
-                    marginBottom: 2 
-                  }}>
-                  {cat === cId ? '●' : '○'} {cName}
+                <div
+                  key={cId}
+                  onClick={() => handleCategoryClick(cId)}
+                  style={{ ...sidebarItem, fontWeight: active ? 700 : 400, color: active ? '#e91e63' : '#333' }}
+                >
+                  {c.categoryName || c.name}
                 </div>
               );
             })}
           </div>
+
+          {/* Lọc theo giá */}
+          <div style={sidebarBox}>
+            <h4 style={sidebarTitle}>Khoảng giá</h4>
+            {[
+              { label: 'Tất cả', value: '' },
+              { label: 'Dưới 100.000đ', value: '0-100000' },
+              { label: '100.000đ - 300.000đ', value: '100000-300000' },
+              { label: '300.000đ - 500.000đ', value: '300000-500000' },
+              { label: '500.000đ - 1.000.000đ', value: '500000-1000000' },
+              { label: 'Trên 1.000.000đ', value: '1000000-99999999' }
+            ].map(opt => (
+              <div
+                key={opt.value}
+                onClick={() => handlePriceChange(opt.value)}
+                style={{ ...sidebarItem, fontWeight: priceRange === opt.value ? 700 : 400, color: priceRange === opt.value ? '#e91e63' : '#333' }}
+              >
+                {opt.label}
+              </div>
+            ))}
+          </div>
+
+          {/* Lọc theo đánh giá */}
+          <div style={sidebarBox}>
+            <h4 style={sidebarTitle}>Đánh giá</h4>
+            {[
+              { label: 'Tất cả', value: '' },
+              { label: '★★★★★ (5 sao)', value: '5' },
+              { label: '★★★★☆ (4 sao trở lên)', value: '4' },
+              { label: '★★★☆☆ (3 sao trở lên)', value: '3' },
+              { label: '★★☆☆☆ (2 sao trở lên)', value: '2' }
+            ].map(opt => (
+              <div
+                key={opt.value}
+                onClick={() => handleRatingChange(opt.value)}
+                style={{ ...sidebarItem, fontWeight: ratingFilter === opt.value ? 700 : 400, color: ratingFilter === opt.value ? '#e91e63' : '#333' }}
+              >
+                {opt.label}
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Khu vực hiển thị sản phẩm */}
-        <div>
-          {/* Thanh Sắp xếp (Sorting) */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, color: 'var(--muted)' }}>Sắp xếp:</span>
+        {/* Nội dung chính */}
+        <div style={{ flex: 1 }}>
+          {/* Sắp xếp */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
             {[
-              ['newest', 'Mới nhất'], 
-              ['price_asc', 'Giá ↑'], 
-              ['price_desc', 'Giá ↓'], 
-              ['sold', 'Bán chạy']
-            ].map(([v, l]) => (
-              <button key={v} className="tag" 
-                onClick={() => { setSort(v); setCurrentPage(1); }}
-                style={{ 
-                  background: sort === v ? 'var(--rose)' : 'var(--warm)', 
-                  color: sort === v ? '#fff' : 'var(--muted)', 
-                  padding: '6px 14px', 
-                  border: 'none', 
-                  borderRadius: 20, 
-                  cursor: 'pointer', 
-                  fontSize: 13, 
-                  fontWeight: 600,
-                  transition: 'all .2s'
-                }}>
-                {l}
+              { label: 'Mới nhất', value: 'newest' },
+              { label: 'Giá tăng', value: 'price_asc' },
+              { label: 'Giá giảm', value: 'price_desc' },
+              { label: 'Bán chạy', value: 'sold' }
+            ].map(s => (
+              <button
+                key={s.value}
+                onClick={() => handleSort(s.value)}
+                style={{
+                  padding: '8px 16px', border: '1px solid #ddd', borderRadius: 6,
+                  background: sort === s.value ? '#e91e63' : '#fff',
+                  color: sort === s.value ? '#fff' : '#333',
+                  cursor: 'pointer', fontWeight: 500, fontSize: 13
+                }}
+              >
+                {s.label}
               </button>
             ))}
           </div>
 
-          {/* Danh sách Product Cards */}
+          {/* Danh sách sản phẩm */}
           {loading ? (
-            <div style={{ textAlign: 'center', padding: 60 }}>Đang tải hoa tươi...</div>
+            <p style={{ textAlign: 'center', color: '#888', padding: 40 }}>Đang tải...</p>
           ) : products.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 60, color: 'var(--muted)' }}>
-              Không tìm thấy sản phẩm phù hợp.
+            <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>
+              <p style={{ fontSize: 16 }}>Không tìm thấy sản phẩm nào</p>
             </div>
           ) : (
-            <>
-              <div className="grid-4">
-                {products.map(p => (
-                  <ProductCard key={p.productId || p.id} p={p} />
-                ))}
-              </div>
-              
-              {/* Thanh Điều hướng Phân trang */}
-              {totalPages > 1 && (
-                <div className="pagination" style={{ marginTop: 32, display: 'flex', justifyContent: 'center', gap: 8 }}>
-                  <button 
-                    disabled={currentPage === 1}
-                    onClick={() => { setCurrentPage(prev => prev - 1); window.scrollTo(0,0); }}
-                    className="page-btn"
-                  >
-                    Trước
-                  </button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+              {products.map(p => (
+                <ProductCard key={p.productId || p.id} product={p} />
+              ))}
+            </div>
+          )}
 
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <button key={i} 
-                      className={`page-btn ${currentPage === i + 1 ? 'active' : ''}`} 
-                      onClick={() => { 
-                        setCurrentPage(i + 1); 
-                        window.scrollTo(0, 0); 
-                      }}>
-                      {i + 1}
-                    </button>
-                  ))}
-
-                  <button 
-                    disabled={currentPage === totalPages}
-                    onClick={() => { setCurrentPage(prev => prev + 1); window.scrollTo(0,0); }}
-                    className="page-btn"
-                  >
-                    Sau
-                  </button>
-                </div>
-              )}
-            </>
+          {/* Phân trang */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 24 }}>
+              <button
+                disabled={page <= 1}
+                onClick={() => { setPage(page - 1); window.scrollTo(0, 0); }}
+                style={{ ...pageBtn, opacity: page <= 1 ? 0.5 : 1 }}
+              >
+                ←
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+                <button
+                  key={n}
+                  onClick={() => { setPage(n); window.scrollTo(0, 0); }}
+                  style={{
+                    ...pageBtn,
+                    background: n === page ? '#e91e63' : '#fff',
+                    color: n === page ? '#fff' : '#333'
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+              <button
+                disabled={page >= totalPages}
+                onClick={() => { setPage(page + 1); window.scrollTo(0, 0); }}
+                style={{ ...pageBtn, opacity: page >= totalPages ? 0.5 : 1 }}
+              >
+                →
+              </button>
+            </div>
           )}
         </div>
       </div>
     </div>
   );
 }
+
+const sidebarBox = { marginBottom: 16, padding: 14, background: '#fff', border: '1px solid #eee', borderRadius: 8 };
+const sidebarTitle = { margin: '0 0 10px', fontSize: 14, fontWeight: 700, color: '#333' };
+const sidebarItem = { padding: '7px 0', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid #f5f5f5', transition: 'color 0.2s' };
+const pageBtn = { width: 36, height: 36, border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer', fontWeight: 600, background: '#fff' };

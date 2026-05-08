@@ -1,17 +1,17 @@
-import { useContext, useState, useEffect } from 'react'; 
+import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
-import { getProducts } from '../services/api'; 
+import { getProducts } from '../services/api';
 import ProductCard from '../components/ProductCard';
 
 export function SearchPage() {
   const { pageParams, navigate } = useContext(AppContext);
   const q = pageParams.q || '';
+
   const [sort, setSort] = useState('newest');
   const [priceRange, setPriceRange] = useState('');
-  
+  const [ratingFilter, setRatingFilter] = useState('');
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  
   const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
@@ -20,9 +20,10 @@ export function SearchPage() {
       try {
         const params = { q, sort };
         if (priceRange) params.priceRange = priceRange;
-        
+        if (ratingFilter) params.rating = ratingFilter;
+
         const response = await getProducts(params);
-        
+
         const items = response.data.items || response.data || [];
         const total = response.data.totalItems || items.length;
 
@@ -37,14 +38,14 @@ export function SearchPage() {
     };
 
     fetchResults();
-  }, [q, sort, priceRange]);
+  }, [q, sort, priceRange, ratingFilter]);
 
   return (
     <div className="page">
       <div style={{ background: 'var(--warm)', padding: '28px 0', marginBottom: 28 }}>
         <div className="container">
           <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 24, marginBottom: 4 }}>
-            🔍 Kết quả tìm kiếm: "{q}"
+            Kết quả tìm kiếm: "{q}"
           </div>
           <div style={{ color: 'var(--muted)', fontSize: 14 }}>
             {loading ? 'Đang tìm kiếm...' : `Tìm thấy ${totalItems} sản phẩm`}
@@ -53,25 +54,44 @@ export function SearchPage() {
       </div>
 
       <div className="container">
-        <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        {/* Bộ lọc */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Lọc giá */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>Giá:</span>
-            <select 
-              value={priceRange} 
+            <select
+              value={priceRange}
               onChange={e => setPriceRange(e.target.value)}
-              style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border)', fontSize: 13, background: '#fff', cursor: 'pointer' }}
+              style={selectStyle}
             >
               <option value="">Tất cả</option>
               <option value="0-100000">Dưới 100k</option>
               <option value="100000-300000">100k - 300k</option>
               <option value="300000-500000">300k - 500k</option>
               <option value="500000-1000000">500k - 1tr</option>
-              <option value="1000000-">Trên 1tr</option>
+              <option value="1000000-99999999">Trên 1tr</option>
             </select>
           </div>
-          
+
+          {/* Lọc đánh giá */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>Đánh giá:</span>
+            <select
+              value={ratingFilter}
+              onChange={e => setRatingFilter(e.target.value)}
+              style={selectStyle}
+            >
+              <option value="">Tất cả</option>
+              <option value="5">★★★★★ (5 sao)</option>
+              <option value="4">★★★★☆ (4 sao trở lên)</option>
+              <option value="3">★★★☆☆ (3 sao trở lên)</option>
+              <option value="2">★★☆☆☆ (2 sao trở lên)</option>
+            </select>
+          </div>
+
           <div style={{ width: 1, height: 24, background: 'var(--border)', margin: '0 8px' }} />
-          
+
+          {/* Sắp xếp */}
           <div style={{ display: 'flex', gap: 8 }}>
             {[
               ['newest', 'Mới nhất'],
@@ -81,7 +101,6 @@ export function SearchPage() {
               <button
                 key={v}
                 onClick={() => setSort(v)}
-                className="tag"
                 style={{
                   background: sort === v ? 'var(--rose)' : 'var(--warm)',
                   color: sort === v ? '#fff' : 'var(--muted)',
@@ -99,6 +118,7 @@ export function SearchPage() {
           </div>
         </div>
 
+        {/* Kết quả */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: 80 }}>Đang tải dữ liệu...</div>
         ) : products.length === 0 ? (
@@ -110,7 +130,6 @@ export function SearchPage() {
           </div>
         ) : (
           <div className="grid-4">
-            {/* Sử dụng key duy nhất từ database */}
             {products.map(p => (
               <ProductCard key={p.productId || p.id} p={p} />
             ))}
@@ -120,3 +139,12 @@ export function SearchPage() {
     </div>
   );
 }
+
+const selectStyle = {
+  padding: '6px 12px',
+  borderRadius: 20,
+  border: '1px solid var(--border)',
+  fontSize: 13,
+  background: '#fff',
+  cursor: 'pointer'
+};

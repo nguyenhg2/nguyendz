@@ -2,112 +2,101 @@ import { createContext, useState, useEffect } from 'react';
 
 export const AppContext = createContext();
 
+// Parse route từ URL
 const parseRoute = () => {
-  const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
-  const params = new URLSearchParams(window.location.search);
-  const [section, id] = path.split('/');
+  const path = window.location.pathname.replace(/^\//, '');
+  const search = new URLSearchParams(window.location.search);
+  const params = Object.fromEntries(search.entries());
 
-  if (!path) return { page: 'home', params: {} };
-  if (section === 'cart') return { page: 'cart', params: {} };
-  if (section === 'checkout') return { page: 'checkout', params: {} };
-  if (section === 'profile') return { page: 'profile', params: {} };
-  if (section === 'contact') return { page: 'contact', params: {} };
-  if (section === 'search') return { page: 'search', params: { q: params.get('q') || '' } };
-  if (section === 'category') {
-    const cat = id || params.get('cat') || '';
-    return {
-      page: 'category',
-      params: {
-        cat: cat ? Number(cat) : '',
-        sort: params.get('sort') || undefined,
-        filter: params.get('filter') || undefined,
-      }
-    };
-  }
-  if (section === 'product' && id) return { page: 'product', params: { id: Number(id) } };
+  if (!path || path === '/') return { page: 'home', params: {} };
 
-  return { page: 'home', params: {} };
+  const parts = path.split('/');
+  const page = parts[0];
+
+  if (parts[1]) params.id = parts[1];
+
+  return { page, params };
 };
 
+// Build URL từ page + params
 const buildUrl = (page, params = {}) => {
-  const query = new URLSearchParams();
+  let url = '/' + page;
+  if (params.id) url += '/' + params.id;
 
-  switch (page) {
-    case 'cart': return '/cart';
-    case 'checkout': return '/checkout';
-    case 'profile': return '/profile';
-    case 'contact': return '/contact';
-    case 'search':
-      if (params.q) query.set('q', params.q);
-      return `/search${query.toString() ? `?${query}` : ''}`;
-    case 'category':
-      if (params.sort) query.set('sort', params.sort);
-      if (params.filter) query.set('filter', params.filter);
-      return `/category${params.cat ? `/${params.cat}` : ''}${query.toString() ? `?${query}` : ''}`;
-    case 'product':
-      return params.id ? `/product/${params.id}` : '/';
-    default:
-      return '/';
-  }
+  const query = { ...params };
+  delete query.id;
+  const qs = new URLSearchParams(query).toString();
+  if (qs) url += '?' + qs;
+
+  return url;
 };
 
 export function AppProvider({ children }) {
-  const initialRoute = parseRoute();
-  const [page, setPage] = useState(initialRoute.page);
-  const [pageParams, setPageParams] = useState(initialRoute.params);
-  const [cart, setCart] = useState(() => {
-    try { const s = localStorage.getItem('flowershop_cart'); return s ? JSON.parse(s) : []; }
-    catch { return []; }
-  });
-  const [user, setUser] = useState(() => {
-    try { const s = localStorage.getItem('flowershop_user'); return s ? JSON.parse(s) : null; }
-    catch { return null; }
-  });
-  const [wishlist, setWishlist] = useState(() => {
-    try { const s = localStorage.getItem('flowershop_wishlist'); return s ? JSON.parse(s) : []; }
-    catch { return []; }
-  });
+  const [currentPage, setCurrentPage] = useState('home');
+  const [pageParams, setPageParams] = useState({});
+  const [cart, setCart] = useState([]);
+  const [user, setUser] = useState(null);
+  const [wishlist, setWishlist] = useState([]);
   const [orders, setOrders] = useState([]);
   const [toast, setToast] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
 
+  // Khởi tạo: đọc route + localStorage
   useEffect(() => {
-    if (user) localStorage.setItem('flowershop_user', JSON.stringify(user));
-    else localStorage.removeItem('flowershop_user');
-  }, [user]);
-  useEffect(() => { localStorage.setItem('flowershop_cart', JSON.stringify(cart)); }, [cart]);
-  useEffect(() => { localStorage.setItem('flowershop_wishlist', JSON.stringify(wishlist)); }, [wishlist]);
+    const { page, params } = parseRoute();
+    setCurrentPage(page);
+    setPageParams(params);
 
-  useEffect(() => {
-    const onPopState = () => {
-      const route = parseRoute();
-      setPage(route.page);
-      setPageParams(route.params);
-      window.scrollTo(0, 0);
+    // Đọc cart từ localStorage
+    try {
+      const saved = localStorage.getItem('cart');
+      if (saved) setCart(JSON.parse(saved));
+    } catch {}
+
+    // Đọc user từ localStorage
+    try {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) setUser(JSON.parse(savedUser));
+    } catch {}
+
+    // Lắng nghe nút back/forward
+    const handlePop = () => {
+      const { page, params } = parseRoute();
+      setCurrentPage(page);
+      setPageParams(params);
     };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
   }, []);
 
-  const navigate = (p, params = {}) => {
-    setPage(p);
+  // Lưu cart vào localStorage khi thay đổi
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
+
+  // Điều hướng
+  const navigate = (page, params = {}) => {
+    const url = buildUrl(page, params);
+    window.history.pushState({}, '', url);
+    setCurrentPage(page);
     setPageParams(params);
-    const url = buildUrl(p, params);
-    if (`${window.location.pathname}${window.location.search}` !== url) {
-      window.history.pushState({}, '', url);
-    }
     window.scrollTo(0, 0);
   };
 
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
+  // Toast
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
+  // Thêm vào giỏ hàng
   const addToCart = (product, qty = 1) => {
     const id = product.productId || product.id;
     const stock = (product.stockQuantity === null || product.stockQuantity === undefined) ? 999 : product.stockQuantity;
 
     if (stock === 0) {
-      showToast('Sản phẩm đã hết hàng');
+      showToast('Sản phẩm đã hết hàng', 'error');
       return;
     }
 
@@ -115,7 +104,7 @@ export function AppProvider({ children }) {
     if (existing) {
       const newQty = Math.min(existing.qty + qty, stock);
       if (newQty === existing.qty) {
-        showToast('Đã đạt số lượng tối đa trong kho');
+        showToast('Đã đạt số lượng tối đa trong kho', 'error');
         return;
       }
       setCart(c => c.map(i => i.id === id ? { ...i, qty: newQty } : i));
@@ -134,28 +123,60 @@ export function AppProvider({ children }) {
     showToast('Đã thêm vào giỏ hàng');
   };
 
+  // Cập nhật số lượng trong giỏ
   const updateCart = (id, qty) => {
-    if (qty <= 0) { setCart(c => c.filter(i => i.id !== id)); return; }
-    setCart(c => c.map(i => {
-      if (i.id !== id) return i;
-      const maxQty = i.stockQuantity || 999;
-      return { ...i, qty: Math.min(qty, maxQty) };
-    }));
+    if (qty <= 0) {
+      setCart(c => c.filter(i => i.id !== id));
+    } else {
+      setCart(c => c.map(i => {
+        if (i.id === id) {
+          const maxQty = i.stockQuantity || 999;
+          return { ...i, qty: Math.min(qty, maxQty) };
+        }
+        return i;
+      }));
+    }
   };
 
+  // Xóa giỏ hàng
   const clearCart = () => setCart([]);
 
-  const cartTotal = cart.reduce((s, i) => s + (i.sale || i.price) * i.qty, 0);
-  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+  // Tính tổng
+  const cartTotal = cart.reduce((sum, i) => {
+    const itemPrice = i.sale || i.price;
+    return sum + itemPrice * i.qty;
+  }, 0);
+
+  const cartCount = cart.reduce((sum, i) => sum + i.qty, 0);
+
+  const value = {
+    currentPage, pageParams, navigate, buildUrl,
+    cart, addToCart, updateCart, clearCart, cartTotal, cartCount,
+    user, setUser,
+    wishlist, setWishlist,
+    orders, setOrders,
+    toast, showToast,
+    showLogin, setShowLogin,
+    showRegister, setShowRegister
+  };
 
   return (
-    <AppContext.Provider value={{
-      page, navigate, pageParams, cart, cartCount, cartTotal, addToCart, updateCart, clearCart,
-      user, setUser, wishlist, setWishlist, orders, setOrders, showToast,
-      showLogin, setShowLogin, showRegister, setShowRegister
-    }}>
+    <AppContext.Provider value={value}>
       {children}
-      {toast && <div className="toast">{toast}</div>}
+
+      {/* Toast notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 99999,
+          padding: '12px 24px', borderRadius: 8,
+          background: toast.type === 'error' ? '#e74c3c' : '#27ae60',
+          color: '#fff', fontSize: 14, fontWeight: 500,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+          animation: 'fadeIn 0.3s'
+        }}>
+          {toast.msg}
+        </div>
+      )}
     </AppContext.Provider>
   );
 }
