@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AdminContext } from '../context/AdminContext';
+import React, { useState, useEffect } from 'react';
+import { useAdmin } from '../context/AdminContext';
 import { orderAPI, IMG_URL } from '../services/api';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
 
 export default function OrdersPage() {
-  const { showToast } = useContext(AdminContext);
+  const { addToast } = useAdmin();
+  const showToast = addToast;
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);

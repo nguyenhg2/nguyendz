@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
-using FlowerShop.Common;
 
 namespace FlowerShop.Controllers.User
 {
@@ -28,22 +27,19 @@ namespace FlowerShop.Controllers.User
             var query = _context.Products
                 .Include(p => p.Images)
                 .Include(p => p.Reviews)
-                .Where(p => p.IsActive);
+                .Where(p => p.IsActive == true);
 
-            // Filter theo danh mục
             if (!string.IsNullOrEmpty(category) && int.TryParse(category, out int catId))
             {
                 query = query.Where(p => p.CategoryId == catId);
             }
 
-            // Filter theo từ khóa
             if (!string.IsNullOrEmpty(search))
             {
                 var keyword = search.ToLower();
                 query = query.Where(p => p.ProductName.ToLower().Contains(keyword));
             }
 
-            // Filter theo khoảng giá
             if (!string.IsNullOrEmpty(priceRange))
             {
                 var parts = priceRange.Split('-');
@@ -51,22 +47,20 @@ namespace FlowerShop.Controllers.User
                     decimal.TryParse(parts[0], out decimal minPrice) &&
                     decimal.TryParse(parts[1], out decimal maxPrice))
                 {
-                    query = query.Where(p => (p.Sale ?? p.Price) >= minPrice && (p.Sale ?? p.Price) <= maxPrice);
+                    query = query.Where(p => (p.DiscountPrice ?? p.Price) >= minPrice && (p.DiscountPrice ?? p.Price) <= maxPrice);
                 }
             }
 
-            // Filter theo đánh giá
             if (!string.IsNullOrEmpty(rating) && int.TryParse(rating, out int minRating))
             {
-                query = query.Where(p => p.Reviews.Any() &&
-                            p.Reviews.Average(r => r.Rating) >= minRating);
+                query = query.Where(p => p.Reviews.Any(r => r.Rating.HasValue) &&
+                            p.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value) >= minRating);
             }
 
-            // Sắp xếp
             query = sort switch
             {
-                "price_asc" => query.OrderBy(p => p.Sale ?? p.Price),
-                "price_desc" => query.OrderByDescending(p => p.Sale ?? p.Price),
+                "price_asc" => query.OrderBy(p => p.DiscountPrice ?? p.Price),
+                "price_desc" => query.OrderByDescending(p => p.DiscountPrice ?? p.Price),
                 "sold" => query.OrderByDescending(p => p.SoldQuantity),
                 _ => query.OrderByDescending(p => p.CreatedDate)
             };
@@ -82,16 +76,16 @@ namespace FlowerShop.Controllers.User
                     productId = p.ProductId,
                     productName = p.ProductName,
                     price = p.Price,
-                    sale = p.Sale,
-                    imageUrl = GetMainImage(p),
+                    sale = p.DiscountPrice,
+                    imageUrl = p.Images.OrderByDescending(i => i.IsMain).ThenBy(i => i.Id).Select(i => i.ImageUrl).FirstOrDefault() ?? p.ImageUrl,
                     categoryId = p.CategoryId,
-                    rating = p.Reviews.Any() ? Math.Round(p.Reviews.Average(r => r.Rating), 1) : 0,
+                    rating = p.Reviews.Any(r => r.Rating.HasValue) ? Math.Round(p.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value), 1) : 0,
                     reviewCount = p.Reviews.Count,
                     soldQuantity = p.SoldQuantity,
                     stockQuantity = p.StockQuantity,
                     isFeatured = p.IsFeatured,
                     createdDate = p.CreatedDate,
-                    isNew = p.CreatedDate >= DateTime.Now.AddDays(-7)
+                    isNew = p.CreatedDate != null && p.CreatedDate >= DateTime.Now.AddDays(-7)
                 })
                 .ToListAsync();
 
@@ -111,66 +105,6 @@ namespace FlowerShop.Controllers.User
             if (product == null) return NotFound(new { message = "Không tìm thấy sản phẩm" });
 
             return Ok(ToProductDetail(product));
-        }
-
-        private static IQueryable<Product> ApplyFilters(IQueryable<Product> query, int? cat, string? keyword, string? priceRange)
-        {
-            if (!string.IsNullOrEmpty(keyword))
-                query = query.Where(p => p.ProductName.Contains(keyword));
-
-            if (cat.HasValue)
-                query = query.Where(p => p.CategoryId == cat);
-
-            return ApplyPriceRange(query, priceRange);
-        }
-
-        private static IQueryable<Product> ApplyPriceRange(IQueryable<Product> query, string? priceRange)
-        {
-            if (string.IsNullOrEmpty(priceRange)) return query;
-
-            var parts = priceRange.Split('-');
-            if (parts.Length != 2) return query;
-
-            if (!string.IsNullOrEmpty(parts[0]) && decimal.TryParse(parts[0], out var minPrice))
-                query = query.Where(p => p.Price >= minPrice);
-            if (!string.IsNullOrEmpty(parts[1]) && decimal.TryParse(parts[1], out var maxPrice))
-                query = query.Where(p => p.Price <= maxPrice);
-
-            return query;
-        }
-
-        
-
-        private static IQueryable<Product> ApplySort(IQueryable<Product> query, string? sort)
-        {
-            return sort switch
-            {
-                "price_asc" => query.OrderBy(p => p.Price),
-                "price_desc" => query.OrderByDescending(p => p.Price),
-                "sold" => query.OrderByDescending(p => p.SoldQuantity),
-                _ => query.OrderByDescending(p => p.CreatedDate)
-            };
-        }
-
-        private static object ToProductItem(Product product)
-        {
-            return new
-            {
-                productId = product.ProductId,
-                id = product.ProductId,
-                name = product.ProductName,
-                price = product.Price,
-                sale = product.DiscountPrice,
-                imageUrl = GetMainImage(product),
-                images = GetImages(product),
-                categoryId = product.CategoryId,
-                rating = product.Rating ?? 0,
-                soldQuantity = product.SoldQuantity,
-                stockQuantity = product.StockQuantity,
-                isFeatured = product.IsFeatured,
-                createdDate = product.CreatedDate,
-                isNew = IsNew(product)
-            };
         }
 
         private static object ToProductDetail(Product product)

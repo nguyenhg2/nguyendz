@@ -138,6 +138,7 @@ export function ProfilePage() {
                 <div style={{ padding: 16, background: 'var(--warm)', borderRadius: 12 }}>
                   <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, textTransform: 'uppercase', color: 'var(--muted)' }}>Thông tin giao hàng</div>
                   <div style={{ fontSize: 14, lineHeight: 1.8 }}>
+                    <span>Khách hàng: <b>{viewOrder.customerName || user.fullName || user.name}</b></span><br />
                     <b>{viewOrder.receiverName || user.name}</b><br />
                     {viewOrder.receiverPhone || user.phone}<br />
                     {viewOrder.receiverAddress}
@@ -145,7 +146,7 @@ export function ProfilePage() {
                 </div>
                 <div style={{ padding: 16, background: 'var(--warm)', borderRadius: 12 }}>
                   <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, textTransform: 'uppercase', color: 'var(--muted)' }}>Thanh toán</div>
-                  <div style={{ fontSize: 14 }}>{viewOrder.paymentMethod === 'cod' ? 'Tiền mặt (COD)' : 'Chuyển khoản'}</div>
+                  <div style={{ fontSize: 14 }}>{String(viewOrder.paymentMethod || '').toLowerCase() === 'cod' ? 'Tiền mặt (COD)' : 'Chuyển khoản'}</div>
                   <div style={{ marginTop: 8, fontSize: 16, fontWeight: 800, color: 'var(--rose)' }}>{fmt(viewOrder.totalAmount)}</div>
                 </div>
               </div>
@@ -165,8 +166,8 @@ export function ProfilePage() {
                         </div>
                       </td>
                       <td>{i.quantity || i.Quantity || 0}</td>
-                      <td>{fmt(i.price || i.Price || 0)}</td>
-                      <td style={{ fontWeight: 700 }}>{fmt((i.price || i.Price || 0) * (i.quantity || i.Quantity || 0))}</td>
+                      <td>{fmt(i.price || i.unitPrice || i.Price || 0)}</td>
+                      <td style={{ fontWeight: 700 }}>{fmt(i.subtotal || (i.price || i.unitPrice || i.Price || 0) * (i.quantity || i.Quantity || 0))}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -86,6 +86,8 @@ namespace FlowerShop.Controllers.Api
 
             var myOrders = await _context.Orders
                 .AsNoTracking()
+                .Include(o => o.User)
+                .Include(o => o.OrderDetails).ThenInclude(od => od.Product)
                 .Where(o => o.UserId == userId.Value)
                 .OrderByDescending(o => o.OrderDate)
                 .Select(o => new {
@@ -93,8 +95,23 @@ namespace FlowerShop.Controllers.Api
                     o.OrderDate,
                     o.TotalAmount,
                     o.Status,
+                    CustomerName = o.User != null ? o.User.FullName : null,
+                    o.ReceiverName,
+                    o.ReceiverPhone,
                     o.ReceiverAddress,
-                    ItemsCount = o.OrderDetails.Count
+                    o.PaymentMethod,
+                    o.Note,
+                    ItemsCount = o.OrderDetails.Count,
+                    Items = o.OrderDetails.Select(od => new
+                    {
+                        od.OrderDetailId,
+                        od.ProductId,
+                        ProductName = od.Product != null ? od.Product.ProductName : "",
+                        ImageUrl = od.Product != null ? od.Product.ImageUrl : null,
+                        od.Quantity,
+                        Price = od.UnitPrice,
+                        od.Subtotal
+                    })
                 })
                 .ToListAsync();
 
