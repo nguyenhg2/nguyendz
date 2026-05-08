@@ -74,8 +74,9 @@ export const productAPI = {
 export const orderAPI = {
   getAll: (params) => api.get('/admin/orders', { params }),
   getById: (id) => api.get('/admin/orders/' + id),
-  updateStatus: (id, status) => api.patch('/admin/orders/' + id + '/status', { status }),
-  cancel: (id, reason) => api.patch('/admin/orders/' + id + '/cancel', { reason }),
+  getDetail: (id) => api.get('/admin/orders/' + id),
+  updateStatus: (id, data) => api.patch('/admin/orders/' + id + '/status', data),
+  cancel: (id, data) => api.patch('/admin/orders/' + id + '/cancel', data),
 };
 
 export const userAPI = {
