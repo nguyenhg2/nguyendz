@@ -209,7 +209,7 @@ export default function HomePage() {
             const cId = c.categoryId || c.id;
             const cName = c.categoryName || c.name;
             return (
-              <div key={cId} onClick={() => navigate('category', { cat: cId })}
+              <div key={cId} onClick={() => navigate('category', { id: cId })}
                 style={{ background: c.color || '#fff4f6', borderRadius: 16, padding: '20px 14px', textAlign: 'center', cursor: 'pointer', transition: 'transform .2s', border: '1px solid var(--border)' }}
                 onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
                 onMouseLeave={e => e.currentTarget.style.transform = ''}>
@@ -232,7 +232,7 @@ export default function HomePage() {
             <button className="btn btn-ghost" onClick={() => navigate('category', { filter: 'sale' })}>Xem tất cả</button>
           </div>
           <div className="section-sub">Ưu đãi có thời hạn, đặt ngay!</div>
-          <div className="grid-4">{sale.map(p => <ProductCard key={p.productId || p.id} p={p}/>)}</div>
+          <div className="grid-4">{sale.map(p => <ProductCard key={p.productId || p.id} product={p}/>)}</div>
         </div>
       )}
 
@@ -244,7 +244,7 @@ export default function HomePage() {
               <button className="btn btn-ghost" onClick={() => navigate('category', { sort: 'sold' })}>Xem tất cả</button>
             </div>
             <div className="section-sub">Được khách hàng yêu thích nhất</div>
-            <div className="grid-4">{hot.map(p => <ProductCard key={p.productId || p.id} p={p}/>)}</div>
+            <div className="grid-4">{hot.map(p => <ProductCard key={p.productId || p.id} product={p}/>)}</div>
           </div>
         </div>
       )}
@@ -256,7 +256,7 @@ export default function HomePage() {
             <button className="btn btn-ghost" onClick={() => navigate('category', { sort: 'newest' })}>Xem tất cả</button>
           </div>
           <div className="section-sub">Những mẫu hoa mới nhất</div>
-          <div className="grid-4">{newArr.map(p => <ProductCard key={p.productId || p.id} p={p}/>)}</div>
+          <div className="grid-4">{newArr.map(p => <ProductCard key={p.productId || p.id} product={p}/>)}</div>
         </div>
       )}
 

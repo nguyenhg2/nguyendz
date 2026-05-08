@@ -47,7 +47,7 @@ export default function Header() {
               const cName = c.categoryName || c.name;
               return (
                 <button key={cId} className="btn btn-ghost" style={{ fontSize: 13 }}
-                  onClick={() => navigate('category', { cat: cId })}>
+                  onClick={() => navigate('category', { id: cId })}>
                   {cName}
                 </button>
               );

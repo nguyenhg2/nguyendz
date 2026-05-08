@@ -43,7 +43,7 @@ export default function Footer() {
               return (
                 <div
                   key={cId}
-                  onClick={() => navigate('category', { cat: cId })}
+                  onClick={() => navigate('category', { id: cId })}
                   style={{ cursor: 'pointer', padding: '4px 0', fontSize: 13, transition: 'color .2s' }}
                   onMouseEnter={e => e.target.style.color = '#f7d6df'}
                   onMouseLeave={e => e.target.style.color = ''}

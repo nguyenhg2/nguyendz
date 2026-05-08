@@ -6,17 +6,17 @@ import { LoginModal, RegisterModal } from './components/AuthModals';
 import Home from './pages/Home';
 import Cart from './pages/Cart';
 import { SearchPage } from './pages/Search';
-import { CategoryPage } from './pages/Category';
+import CategoryPage from './pages/Category';
 import { ProductDetailPage } from './pages/ProductDetail';
 import { ProfilePage } from './pages/Profile';
 import { ContactPage } from './pages/Contact';
 import { CheckoutPage } from './pages/Checkout';
 
 function App() {
-  const { page, showLogin, showRegister } = useContext(AppContext);
+  const { currentPage, showLogin, showRegister } = useContext(AppContext);
 
   const renderPage = () => {
-    switch(page) {
+    switch (currentPage) {
       case 'home': return <Home />;
       case 'cart': return <Cart />;
       case 'search': return <SearchPage />;
@@ -39,4 +39,5 @@ function App() {
     </>
   );
 }
+
 export default App;

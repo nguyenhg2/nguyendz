@@ -312,7 +312,7 @@ export function ProductDetailPage() {
               <button className="btn btn-ghost" onClick={() => navigate('category', { cat: p.cat })}>Xem thêm</button>
             </div>
             <div className="grid-4">
-              {related.map(item => <ProductCard key={item.productId || item.id} p={item} />)}
+              {related.map(item => <ProductCard key={item.productId || item.id} product={item} />)}
             </div>
           </div>
         )}

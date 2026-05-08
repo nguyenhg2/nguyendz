@@ -18,7 +18,7 @@ export function SearchPage() {
     const fetchResults = async () => {
       setLoading(true);
       try {
-        const params = { q, sort };
+        const params = { search: q, sort };
         if (priceRange) params.priceRange = priceRange;
         if (ratingFilter) params.rating = ratingFilter;
 
@@ -54,7 +54,6 @@ export function SearchPage() {
       </div>
 
       <div className="container">
-        {/* Bộ lọc */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Lọc giá */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -82,10 +81,10 @@ export function SearchPage() {
               style={selectStyle}
             >
               <option value="">Tất cả</option>
-              <option value="5">★★★★★ (5 sao)</option>
-              <option value="4">★★★★☆ (4 sao trở lên)</option>
-              <option value="3">★★★☆☆ (3 sao trở lên)</option>
-              <option value="2">★★☆☆☆ (2 sao trở lên)</option>
+              <option value="5">5 sao</option>
+              <option value="4">4 sao trở lên</option>
+              <option value="3">3 sao trở lên</option>
+              <option value="2">2 sao trở lên</option>
             </select>
           </div>
 
@@ -118,7 +117,6 @@ export function SearchPage() {
           </div>
         </div>
 
-        {/* Kết quả */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: 80 }}>Đang tải dữ liệu...</div>
         ) : products.length === 0 ? (
@@ -131,7 +129,7 @@ export function SearchPage() {
         ) : (
           <div className="grid-4">
             {products.map(p => (
-              <ProductCard key={p.productId || p.id} p={p} />
+              <ProductCard key={p.productId || p.id} product={p} />
             ))}
           </div>
         )}
