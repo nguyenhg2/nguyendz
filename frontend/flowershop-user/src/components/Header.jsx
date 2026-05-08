@@ -11,9 +11,10 @@ export default function Header() {
     const fetchCats = async () => {
       try {
         const response = await getCategories();
-        setCategories(response.data);
+        const data = response.data.items || response.data || [];
+        setCategories(data);
       } catch (error) {
-        console.error("Không thể tải danh mục:", error);
+        setCategories([]);
       }
     };
     fetchCats();
@@ -34,42 +35,46 @@ export default function Header() {
   const displayName = user?.fullName || user?.name || 'User';
 
   return (
-    <header style={{ background:'#fff', borderBottom:'1px solid var(--border)', position:'sticky', top:0, zIndex:100 }}>
+    <header style={{ background: '#fff', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 100 }}>
       <div className="container">
-        <div style={{ display:'flex', alignItems:'center', gap:16, padding:'14px 0' }}>
-          <div onClick={() => navigate('home')} style={{ cursor:'pointer', fontFamily:'Playfair Display,serif', fontSize:22, fontWeight:600, color:'var(--rose)', whiteSpace:'nowrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 0' }}>
+          <div onClick={() => navigate('home')} style={{ cursor: 'pointer', fontFamily: 'Playfair Display,serif', fontSize: 22, fontWeight: 600, color: 'var(--rose)', whiteSpace: 'nowrap' }}>
             Mộng Lan
           </div>
-          <nav style={{ display:'flex', gap:4, flex:1 }}>
-            {categories.slice(0, 4).map(c => (
-              <button key={c.id} className="btn btn-ghost" style={{ fontSize:13 }}
-                onClick={() => navigate('category', { cat: c.id })}>
-                {c.name}
-              </button>
-            ))}
+          <nav style={{ display: 'flex', gap: 4, flex: 1 }}>
+            {categories.slice(0, 4).map(c => {
+              const cId = c.categoryId || c.id;
+              const cName = c.categoryName || c.name;
+              return (
+                <button key={cId} className="btn btn-ghost" style={{ fontSize: 13 }}
+                  onClick={() => navigate('category', { cat: cId })}>
+                  {cName}
+                </button>
+              );
+            })}
           </nav>
-          <form onSubmit={doSearch} style={{ display:'flex', gap:0, maxWidth:240 }}>
+          <form onSubmit={doSearch} style={{ display: 'flex', gap: 0, maxWidth: 240 }}>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm hoa..."
-              style={{ borderRadius:'20px 0 0 20px', paddingRight:8 }} />
-            <button type="submit" className="btn btn-primary" style={{ borderRadius:'0 20px 20px 0', padding:'8px 14px' }}>Tìm kiếm</button>
+              style={{ borderRadius: '20px 0 0 20px', paddingRight: 8 }} />
+            <button type="submit" className="btn btn-primary" style={{ borderRadius: '0 20px 20px 0', padding: '8px 14px' }}>Tìm</button>
           </form>
-          <button className="btn btn-ghost" onClick={() => navigate('cart')} style={{ position:'relative', padding:'8px 12px' }}>
-            🛒Giỏ hàng
+          <button className="btn btn-ghost" onClick={() => navigate('cart')} style={{ position: 'relative', padding: '8px 12px' }}>
+            Giỏ hàng
             {cartCount > 0 && (
-              <span style={{ position:'absolute', top:0, right:0, background:'var(--rose)', color:'#fff', borderRadius:'50%', width:18, height:18, fontSize:10, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <span style={{ position: 'absolute', top: 0, right: 0, background: 'var(--rose)', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {cartCount}
               </span>
             )}
           </button>
           {user ? (
-            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-              <button className="btn btn-ghost" onClick={() => navigate('profile')} style={{ fontSize:13 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button className="btn btn-ghost" onClick={() => navigate('profile')} style={{ fontSize: 13 }}>
                 {displayName.split(' ').pop()}
               </button>
-              <button className="btn btn-ghost" style={{ fontSize:13 }} onClick={handleLogout}>Đăng xuất</button>
+              <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={handleLogout}>Đăng xuất</button>
             </div>
           ) : (
-            <button className="btn btn-outline" onClick={() => setShowLogin(true)} style={{ whiteSpace:'nowrap' }}>Đăng nhập</button>
+            <button className="btn btn-outline" onClick={() => setShowLogin(true)} style={{ whiteSpace: 'nowrap' }}>Đăng nhập</button>
           )}
         </div>
       </div>

@@ -1,19 +1,19 @@
-import { useContext, useState, useEffect } from 'react'; // Thêm useState, useEffect
+import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
-import { getCategories } from '../services/api'; // Import hàm lấy danh mục từ API
+import { getCategories } from '../services/api';
 
 export default function Footer() {
   const { navigate } = useContext(AppContext);
-  const [categories, setCategories] = useState([]); // State lưu danh mục từ DB
+  const [categories, setCategories] = useState([]);
 
-  // Lấy danh sách danh mục thực tế từ database
   useEffect(() => {
     const fetchCats = async () => {
       try {
-        const response = await getCategories(); //
-        setCategories(response.data);
+        const response = await getCategories();
+        const data = response.data.items || response.data || [];
+        setCategories(data);
       } catch (error) {
-        console.error("Lỗi tải danh mục footer:", error);
+        setCategories([]);
       }
     };
     fetchCats();
@@ -29,7 +29,7 @@ export default function Footer() {
             <div style={{ marginTop: 16, display: 'flex', gap: 10 }}>
               {['fb', 'ig', 'yt'].map(s => (
                 <div key={s} style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14 }}>
-                  {s === 'fb' ? 'f' : s === 'ig' ? '◎' : '▶'}
+                  {s === 'fb' ? 'f' : s === 'ig' ? 'ig' : 'yt'}
                 </div>
               ))}
             </div>
@@ -37,18 +37,21 @@ export default function Footer() {
 
           <div>
             <div style={{ fontWeight: 700, fontSize: 14, color: '#f7d6df', marginBottom: 14, textTransform: 'uppercase', letterSpacing: .5 }}>Danh mục</div>
-            {/* Hiển thị danh mục động từ database */}
-            {categories.map(c => (
-              <div 
-                key={c.id} 
-                onClick={() => navigate('category', { cat: c.id })} 
-                style={{ cursor: 'pointer', padding: '4px 0', fontSize: 13, transition: 'color .2s' }} 
-                onMouseEnter={e => e.target.style.color = '#f7d6df'} 
-                onMouseLeave={e => e.target.style.color = ''}
-              >
-                {c.name}
-              </div>
-            ))}
+            {categories.map(c => {
+              const cId = c.categoryId || c.id;
+              const cName = c.categoryName || c.name;
+              return (
+                <div
+                  key={cId}
+                  onClick={() => navigate('category', { cat: cId })}
+                  style={{ cursor: 'pointer', padding: '4px 0', fontSize: 13, transition: 'color .2s' }}
+                  onMouseEnter={e => e.target.style.color = '#f7d6df'}
+                  onMouseLeave={e => e.target.style.color = ''}
+                >
+                  {cName}
+                </div>
+              );
+            })}
           </div>
 
           <div>
@@ -63,14 +66,14 @@ export default function Footer() {
             <div style={{ fontSize: 13, lineHeight: 2 }}>
               <div>123 Đường Hoa Mai, Q.1, TP.HCM</div>
               <div>0901 234 567</div>
-              <div>✉️ hello@monglan.vn</div>
+              <div>hello@monglan.vn</div>
               <div>7:00 – 21:00 mỗi ngày</div>
             </div>
           </div>
         </div>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,.1)', paddingTop: 20, textAlign: 'center', fontSize: 12, color: '#9a7a68' }}>
-          © 2026 Mộng Lan Flower. Tất cả quyền được bảo lưu. Made with love in Vietnam
+          2026 Mộng Lan Flower. Tất cả quyền được bảo lưu.
         </div>
       </div>
     </footer>

@@ -1,12 +1,17 @@
 import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
-import { getMyOrders } from '../services/api'; 
+import { getMyOrders, IMG_URL } from '../services/api';
 import { fmt } from '../components/fmt';
+
+const imageSrc = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return IMG_URL + url;
+  return '';
+};
 
 export function ProfilePage() {
   const { user, setUser, navigate, showToast, setShowLogin } = useContext(AppContext);
-  // eslint-disable-next-line no-unused-vars
-  const navigateUnused = navigate;
   const [tab, setTab] = useState('info');
   const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' });
   const [pwForm, setPwForm] = useState({ old: '', new1: '', new2: '' });
@@ -21,10 +26,9 @@ export function ProfilePage() {
       const fetchOrders = async () => {
         setLoadingOrders(true);
         try {
-          const response = await getMyOrders(); 
+          const response = await getMyOrders();
           setRealOrders(response.data || []);
         } catch (error) {
-          console.error("Lỗi lấy đơn hàng:", error);
           showToast('Không thể tải lịch sử đơn hàng');
         } finally {
           setLoadingOrders(false);
@@ -32,7 +36,6 @@ export function ProfilePage() {
       };
       fetchOrders();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, user]);
 
   if (!user) return (
@@ -44,7 +47,6 @@ export function ProfilePage() {
     </div>
   );
 
-  // Label trạng thái khớp với dữ liệu Tiếng Việt từ Database
   const statusClass = { 'Chờ xử lý': 'status-pending', 'Đã xác nhận': 'status-processing', 'Hoàn thành': 'status-delivered', 'Đã hủy': 'status-cancelled' };
 
   return (
@@ -53,10 +55,10 @@ export function ProfilePage() {
         <div className="container">
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--rose-light)', color: 'var(--rose)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 24 }}>
-              {user?.name ? user.name[0].toUpperCase() : 'U'}
+              {(user?.fullName || user?.name)?.[0]?.toUpperCase() || 'U'}
             </div>
             <div>
-              <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 24 }}>{user.name}</div>
+              <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 24 }}>{user.fullName || user.name}</div>
               <div style={{ color: 'var(--muted)', fontSize: 14 }}>{user.email}</div>
             </div>
           </div>
@@ -66,7 +68,7 @@ export function ProfilePage() {
       <div className="container" style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 28, alignItems: 'start' }}>
         <div style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
           {[['info', 'Thông tin cá nhân'], ['password', 'Đổi mật khẩu'], ['orders', 'Lịch sử đơn hàng']].map(([k, l]) => (
-            <div key={k} onClick={() => { setTab(k); setViewOrder(null) }} style={{ padding: '14px 20px', cursor: 'pointer', fontWeight: tab === k ? 700 : 400, color: tab === k ? 'var(--rose)' : 'var(--text)', background: tab === k ? 'var(--rose-light)' : '', borderLeft: `3px solid ${tab === k ? 'var(--rose)' : 'transparent'}`, transition: 'all .2s' }}>
+            <div key={k} onClick={() => { setTab(k); setViewOrder(null); }} style={{ padding: '14px 20px', cursor: 'pointer', fontWeight: tab === k ? 700 : 400, color: tab === k ? 'var(--rose)' : 'var(--text)', background: tab === k ? 'var(--rose-light)' : '', borderLeft: `3px solid ${tab === k ? 'var(--rose)' : 'transparent'}`, transition: 'all .2s' }}>
               {l}
             </div>
           ))}
@@ -80,8 +82,8 @@ export function ProfilePage() {
                 <div className="form-group"><label>Họ tên</label><input value={form.name} onChange={e => set('name', e.target.value)} /></div>
                 <div className="form-group"><label>Số điện thoại</label><input value={form.phone} onChange={e => set('phone', e.target.value)} /></div>
               </div>
-              <div className="form-group"><label>Email</label><input value={form.email} disabled style={{background: '#f5f5f5'}} /></div>
-              <button className="btn btn-primary" onClick={() => { setUser(u => ({ ...u, ...form })); showToast('Cập nhật thông tin thành công!') }}>Lưu thay đổi</button>
+              <div className="form-group"><label>Email</label><input value={form.email} disabled style={{ background: '#f5f5f5' }} /></div>
+              <button className="btn btn-primary" onClick={() => { setUser(u => ({ ...u, ...form })); showToast('Cập nhật thông tin thành công!'); }}>Lưu thay đổi</button>
             </>
           )}
 
@@ -92,7 +94,7 @@ export function ProfilePage() {
                 <div className="form-group"><label>Mật khẩu hiện tại</label><input type="password" value={pwForm.old} onChange={e => setPwForm(f => ({ ...f, old: e.target.value }))} /></div>
                 <div className="form-group"><label>Mật khẩu mới</label><input type="password" value={pwForm.new1} onChange={e => setPwForm(f => ({ ...f, new1: e.target.value }))} /></div>
                 <div className="form-group"><label>Xác nhận mật khẩu mới</label><input type="password" value={pwForm.new2} onChange={e => setPwForm(f => ({ ...f, new2: e.target.value }))} /></div>
-                <button className="btn btn-primary" onClick={() => { if (pwForm.new1 === pwForm.new2 && pwForm.new1) { showToast('Đổi mật khẩu thành công!'); setPwForm({ old: '', new1: '', new2: '' }) } else showToast('Mật khẩu không khớp!') }}>Đổi mật khẩu</button>
+                <button className="btn btn-primary" onClick={() => { if (pwForm.new1 === pwForm.new2 && pwForm.new1) { showToast('Đổi mật khẩu thành công!'); setPwForm({ old: '', new1: '', new2: '' }); } else showToast('Mật khẩu không khớp!'); }}>Đổi mật khẩu</button>
               </div>
             </>
           )}
@@ -128,7 +130,7 @@ export function ProfilePage() {
           {tab === 'orders' && viewOrder && (
             <>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24 }}>
-                <button className="btn btn-ghost" onClick={() => setViewOrder(null)}>← Quay lại</button>
+                <button className="btn btn-ghost" onClick={() => setViewOrder(null)}>Quay lại</button>
                 <div style={{ fontWeight: 800, fontSize: 17 }}>Chi tiết đơn #{viewOrder.orderId?.toString().padStart(4, '0')}</div>
                 <span className={`status-badge ${statusClass[viewOrder.status]}`}>{viewOrder.status}</span>
               </div>
@@ -154,7 +156,11 @@ export function ProfilePage() {
                     <tr key={i.id || idx}>
                       <td>
                         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                          <span style={{ fontSize: 24 }}>{i.imageUrl || '🌼'}</span>
+                          <div style={{ width: 36, height: 36, borderRadius: 4, overflow: 'hidden', background: 'var(--warm)', flexShrink: 0 }}>
+                            {imageSrc(i.imageUrl) ? (
+                              <img src={imageSrc(i.imageUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : null}
+                          </div>
                           <span style={{ fontWeight: 600, fontSize: 14 }}>{i.productName || i.name}</span>
                         </div>
                       </td>

@@ -20,7 +20,6 @@ export function ProductDetailPage() {
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState('');
-
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState('desc');
   const [myStars, setMyStars] = useState(0);
@@ -39,36 +38,33 @@ export function ProductDetailPage() {
 
         const productData = prodRes.data;
         setP(productData);
-        setCategories(catRes.data);
+        setCategories(catRes.data.items || catRes.data || []);
         setSelectedImage(productData.images?.[0]?.imageUrl || productData.imageUrl || '');
         setQty(1);
 
         const relatedRes = await getProducts({ cat: productData.cat || productData.categoryId });
         const relatedItems = relatedRes.data.items || relatedRes.data || [];
-
         setRelated(
           relatedItems
             .filter(x => (x.id || x.productId) !== (productData.id || productData.productId))
             .slice(0, 4)
         );
-
       } catch (error) {
-        showToast("Không thể tải thông tin sản phẩm");
+        showToast('Không thể tải thông tin sản phẩm');
       } finally {
         setLoading(false);
         window.scrollTo(0, 0);
       }
     };
-
     initData();
   }, [pageParams.id]);
 
-  const stock = p?.stockQuantity || 0;
+  const stock = (p?.stockQuantity === null || p?.stockQuantity === undefined) ? 999 : p.stockQuantity;
 
   const handleQtyChange = (value) => {
     const num = parseInt(value);
     if (isNaN(num) || num < 1) { setQty(1); return; }
-    if (num > stock) { setQty(stock); return; }
+    if (stock > 0 && num > stock) { setQty(stock); return; }
     setQty(num);
   };
 
@@ -86,23 +82,20 @@ export function ProductDetailPage() {
   const handleReview = async () => {
     if (!user) { setShowLogin(true); return; }
     if (!myStars || !myReview.trim()) {
-      showToast("Vui lòng chọn số sao và nhập nhận xét");
+      showToast('Vui lòng chọn số sao và nhập nhận xét');
       return;
     }
-
     setIsSubmitting(true);
     try {
       await submitReviewApi({
-        productId: p.id,
+        productId: p.id || p.productId,
         rating: myStars,
         comment: myReview
       });
-
       showToast('Cảm ơn bạn đã đánh giá sản phẩm!');
       setMyStars(0);
       setMyReview('');
-
-      const updatedProd = await getProductDetail(p.id);
+      const updatedProd = await getProductDetail(p.id || p.productId);
       setP(updatedProd.data);
     } catch (error) {
       showToast(error.response?.data?.message || 'Gửi đánh giá thất bại');
@@ -115,7 +108,7 @@ export function ProductDetailPage() {
   if (!p) return <div style={{ padding: 100, textAlign: 'center' }}>Sản phẩm không tồn tại.</div>;
 
   const discount = p.sale ? Math.round((1 - p.sale / p.price) * 100) : 0;
-  const currentCat = categories.find(c => c.id === p.cat);
+  const currentCat = categories.find(c => (c.categoryId || c.id) === p.cat);
   const galleryImages = (p.images?.length ? p.images : [{ id: 'main', imageUrl: p.imageUrl }])
     .filter(x => x.imageUrl);
   const mainImageSrc = imageSrc(selectedImage || p.imageUrl);
@@ -126,7 +119,7 @@ export function ProductDetailPage() {
         <div className="container" style={{ fontSize: 13, color: 'var(--muted)' }}>
           <span style={{ cursor: 'pointer' }} onClick={() => navigate('home')}>Trang chủ</span> {'>'}{' '}
           <span style={{ cursor: 'pointer' }} onClick={() => navigate('category', { cat: p.cat })}>
-            {currentCat?.name || 'Sản phẩm'}
+            {currentCat?.categoryName || currentCat?.name || 'Sản phẩm'}
           </span> {'>'}{' '}
           {p.name}
         </div>
@@ -135,7 +128,7 @@ export function ProductDetailPage() {
       <div className="container">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, marginBottom: 48 }}>
           <div>
-            <div style={{ background: '#fff', borderRadius: 20, aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100, overflow: 'hidden', border: '1px solid var(--border)' }}>
+            <div style={{ background: '#fff', borderRadius: 20, aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid var(--border)' }}>
               {mainImageSrc ? (
                 <img src={mainImageSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
               ) : null}
@@ -145,7 +138,6 @@ export function ProductDetailPage() {
                 {galleryImages.map(img => {
                   const thumbSrc = imageSrc(img.imageUrl);
                   const active = img.imageUrl === (selectedImage || p.imageUrl);
-
                   return (
                     <button
                       key={img.id || img.imageUrl}
@@ -184,7 +176,7 @@ export function ProductDetailPage() {
 
             <div style={{ display: 'flex', gap: 14, alignItems: 'baseline', marginBottom: 20 }}>
               <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--rose)' }}>{fmt(p.sale || p.price)}</span>
-              {p.sale && (
+              {p.sale && p.sale < p.price && (
                 <>
                   <span style={{ textDecoration: 'line-through', color: 'var(--muted)', fontSize: 18 }}>{fmt(p.price)}</span>
                   <span className="badge badge-sale">-{discount}%</span>
@@ -196,7 +188,7 @@ export function ProductDetailPage() {
 
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8, fontWeight: 700, textTransform: 'uppercase' }}>
-                Số lượng {stock > 0 ? `(còn ${stock} sản phẩm)` : '(Hết hàng)'}
+                Số lượng {stock > 0 && stock < 999 ? `(còn ${stock} sản phẩm)` : stock === 0 ? '(Hết hàng)' : ''}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
                 <button
@@ -207,15 +199,15 @@ export function ProductDetailPage() {
                 <input
                   type="number"
                   min="1"
-                  max={stock}
+                  max={stock < 999 ? stock : undefined}
                   value={qty}
                   onChange={e => handleQtyChange(e.target.value)}
                   disabled={stock === 0}
                   style={{ width: 60, textAlign: 'center', padding: '8px 4px', border: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none' }}
                 />
                 <button
-                  onClick={() => setQty(q => Math.min(stock, q + 1))}
-                  disabled={stock === 0 || qty >= stock}
+                  onClick={() => setQty(q => Math.min(stock < 999 ? stock : q + 1, q + 1))}
+                  disabled={stock === 0 || (stock < 999 && qty >= stock)}
                   style={{ padding: '8px 15px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', borderRadius: '0 4px 4px 0' }}
                 >+</button>
               </div>
@@ -243,7 +235,7 @@ export function ProductDetailPage() {
             <div className="divider" style={{ margin: '20px 0' }} />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              {[['Giao nhanh 2-4h'], ['Hoa tươi 100%'], ['Đổi trả miễn phí'], ['Hỗ trợ 24/7']].map(([t]) => (
+              {['Giao nhanh 2-4h', 'Hoa tươi 100%', 'Đổi trả miễn phí', 'Hỗ trợ 24/7'].map(t => (
                 <div key={t} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: 'var(--muted)' }}>
                   <span>{t}</span>
                 </div>
@@ -263,7 +255,7 @@ export function ProductDetailPage() {
 
         {activeTab === 'desc' ? (
           <div style={{ lineHeight: 1.8, color: 'var(--text)', maxWidth: 800, marginBottom: 60 }}>
-            <p style={{ whiteSpace: 'pre-line' }}>{p.desc || "Thông tin mô tả sản phẩm đang được cập nhật."}</p>
+            <p style={{ whiteSpace: 'pre-line' }}>{p.desc || 'Thông tin mô tả sản phẩm đang được cập nhật.'}</p>
             <div style={{ marginTop: 24, padding: 20, background: 'var(--warm)', borderRadius: 12 }}>
               <h4 style={{ marginBottom: 10 }}>Mộng Lan Flower cam kết:</h4>
               <ul style={{ paddingLeft: 20, fontSize: 14 }}>
@@ -320,7 +312,7 @@ export function ProductDetailPage() {
               <button className="btn btn-ghost" onClick={() => navigate('category', { cat: p.cat })}>Xem thêm</button>
             </div>
             <div className="grid-4">
-              {related.map(item => <ProductCard key={item.id} p={item} />)}
+              {related.map(item => <ProductCard key={item.productId || item.id} p={item} />)}
             </div>
           </div>
         )}

@@ -63,7 +63,6 @@ export function CheckoutPage() {
       clearCart();
       setStep(3);
       showToast('Đặt hàng thành công!');
-
     } catch (error) {
       showToast(error.response?.data?.message || 'Có lỗi xảy ra khi đặt hàng');
     } finally {
@@ -74,6 +73,7 @@ export function CheckoutPage() {
   if (step === 3) return (
     <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{ textAlign: 'center', maxWidth: 400 }}>
+        <div style={{ fontSize: 80, marginBottom: 16 }}>&#10003;</div>
         <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 28, marginBottom: 8 }}>Đặt hàng thành công!</div>
         <div style={{ color: 'var(--muted)', marginBottom: 8 }}>Cảm ơn bạn đã tin tưởng Mộng Lan Flower</div>
         <div style={{ color: 'var(--muted)', marginBottom: 24, fontSize: 14 }}>Chúng tôi sẽ liên hệ xác nhận và giao hàng trong 2-4 giờ</div>
@@ -127,7 +127,7 @@ export function CheckoutPage() {
                 <textarea value={form.note} onChange={e => set('note', e.target.value)} rows={3} placeholder="Ví dụ: Lời chúc trên thiệp, thời gian giao hoa..." />
               </div>
               <button className="btn btn-primary" style={{ padding: '12px 32px' }} onClick={() => { if (validate()) setStep(2); }}>
-                Tiếp tục
+                Tiếp tục thanh toán
               </button>
             </div>
           )}
@@ -139,7 +139,7 @@ export function CheckoutPage() {
                 ['cod', 'Thanh toán khi nhận hàng (COD)', 'Trả tiền mặt cho shipper khi nhận hoa'],
                 ['transfer', 'Chuyển khoản ngân hàng', 'Thanh toán trước qua STK ngân hàng']
               ].map(([v, l, sub]) => (
-                <div key={v} onClick={() => set('payment', v)} style={{ border: `2px solid ${form.payment === v ? 'var(--rose)' : 'var(--border)'}`, borderRadius: 12, padding: 16, marginBottom: 12, cursor: 'pointer', background: form.payment === v ? 'var(--rose-light)' : '#fff' }}>
+                <div key={v} onClick={() => set('payment', v)} style={{ border: `2px solid ${form.payment === v ? 'var(--rose)' : 'var(--border)'}`, borderRadius: 12, padding: 16, marginBottom: 12, cursor: 'pointer', background: form.payment === v ? 'var(--rose-light)' : '#fff', transition: 'all .2s' }}>
                   <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{l}</div>
                   <div style={{ fontSize: 13, color: 'var(--muted)' }}>{sub}</div>
                   {v === 'transfer' && form.payment === 'transfer' && (
@@ -171,21 +171,20 @@ export function CheckoutPage() {
         <div style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--border)', padding: 24, position: 'sticky', top: 80 }}>
           <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>Đơn hàng của bạn</div>
           <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: 16 }}>
-            {cart.map(i => {
-              const src = imageSrc(i.imageUrl);
-              return (
-                <div key={i.id} style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 6, overflow: 'hidden', background: 'var(--warm)', flexShrink: 0 }}>
-                    {src ? <img src={src} alt={i.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>{i.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>x{i.qty}</div>
-                  </div>
-                  <span style={{ fontWeight: 700, fontSize: 14 }}>{fmt((i.sale || i.price) * i.qty)}</span>
+            {cart.map(i => (
+              <div key={i.id} style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 6, overflow: 'hidden', background: 'var(--warm)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {imageSrc(i.imageUrl) ? (
+                    <img src={imageSrc(i.imageUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : null}
                 </div>
-              );
-            })}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>{i.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>x{i.qty}</div>
+                </div>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>{fmt((i.sale || i.price) * i.qty)}</span>
+              </div>
+            ))}
           </div>
           <div className="divider" style={{ margin: '15px 0' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 8, color: 'var(--muted)' }}>

@@ -84,10 +84,10 @@ export default function ProductsPage() {
     try {
       const res = await productAPI.setMainImage(editId, imageId);
       setExistingImages(res.data || []);
-      addToast('Da chon anh chinh');
+      addToast('Đã chọn ảnh chính');
       load();
     } catch {
-      addToast('Loi chon anh chinh', 'error');
+      addToast('Lỗi chọn ảnh chính', 'error');
     }
   };
 
@@ -96,10 +96,10 @@ export default function ProductsPage() {
     try {
       await productAPI.deleteImage(editId, imageId);
       setExistingImages(images => images.filter(img => img.id !== imageId));
-      addToast('Da xoa anh');
+      addToast('Đã xoá ảnh');
       load();
     } catch {
-      addToast('Loi xoa anh', 'error');
+      addToast('Lỗi xoá ảnh', 'error');
     }
   };
 
@@ -247,7 +247,7 @@ export default function ProductsPage() {
                 <input type="file" accept="image/*" multiple onChange={e => { setImgFiles([...e.target.files]); setMainIdx(0); }}/>
                 {existingImages.length > 0 && (
                   <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', marginBottom: 8 }}>Anh hien co</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', marginBottom: 8 }}>Ảnh hiện có</div>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                       {existingImages.map(img => (
                         <div key={img.id} style={{ width: 86 }}>
@@ -256,8 +256,8 @@ export default function ProductsPage() {
                             <img src={imgSrc(img.imageUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}/>
                           </button>
                           <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 4 }}>
-                            <span style={{ flex: 1, fontSize: 10, fontWeight: 700, color: img.isMain ? '#be3455' : '#6b7280' }}>{img.isMain ? 'Anh chinh' : 'Chon chinh'}</span>
-                            <button type="button" className="btn btn-danger btn-sm" onClick={() => deleteExistingImage(img.id)} style={{ padding: '2px 6px', fontSize: 10 }}>Xoa</button>
+                            <span style={{ flex: 1, fontSize: 10, fontWeight: 700, color: img.isMain ? '#be3455' : '#6b7280' }}>{img.isMain ? 'Ảnh chính' : 'Chọn chính'}</span>
+                            <button type="button" className="btn btn-danger btn-sm" onClick={() => deleteExistingImage(img.id)} style={{ padding: '2px 6px', fontSize: 10 }}>Xoá</button>
                           </div>
                         </div>
                       ))}

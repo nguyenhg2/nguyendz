@@ -86,7 +86,6 @@ export function AppProvider({ children }) {
       setPageParams(route.params);
       window.scrollTo(0, 0);
     };
-
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
@@ -100,35 +99,38 @@ export function AppProvider({ children }) {
     }
     window.scrollTo(0, 0);
   };
+
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
 
   const addToCart = (product, qty = 1) => {
     const id = product.productId || product.id;
-    const stock = product.stockQuantity === null || product.stockQuantity === undefined ? 999 : product.stockQuantity;
+    const stock = (product.stockQuantity === null || product.stockQuantity === undefined) ? 999 : product.stockQuantity;
 
     if (stock === 0) {
       showToast('Sản phẩm đã hết hàng');
       return;
     }
 
-    setCart(c => {
-      const ex = c.find(i => i.id === id);
-      if (ex) {
-        const newQty = Math.min(ex.qty + qty, stock);
-        if (newQty === ex.qty) return c;
-        return c.map(i => i.id === id ? { ...i, qty: newQty } : i);
+    const existing = cart.find(i => i.id === id);
+    if (existing) {
+      const newQty = Math.min(existing.qty + qty, stock);
+      if (newQty === existing.qty) {
+        showToast('Đã đạt số lượng tối đa trong kho');
+        return;
       }
-      return [...c, {
+      setCart(c => c.map(i => i.id === id ? { ...i, qty: newQty } : i));
+    } else {
+      setCart(c => [...c, {
         id,
         productId: id,
         name: product.productName || product.name,
-        imageUrl: product.imageUrl || product.img || null,
+        imageUrl: product.imageUrl || null,
         price: product.price,
         sale: product.sale || product.discountPrice || null,
         stockQuantity: stock,
         qty: Math.min(qty, stock)
-      }];
-    });
+      }]);
+    }
     showToast('Đã thêm vào giỏ hàng');
   };
 
@@ -140,6 +142,7 @@ export function AppProvider({ children }) {
       return { ...i, qty: Math.min(qty, maxQty) };
     }));
   };
+
   const clearCart = () => setCart([]);
 
   const cartTotal = cart.reduce((s, i) => s + (i.sale || i.price) * i.qty, 0);
