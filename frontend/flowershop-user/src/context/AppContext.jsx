@@ -104,13 +104,18 @@ export function AppProvider({ children }) {
 
   const addToCart = (product, qty = 1) => {
     const id = product.productId || product.id;
-    const stock = product.stockQuantity || 0;
-    if (stock === 0) { showToast('Sản phẩm đã hết hàng'); return; }
+    const stock = product.stockQuantity === null || product.stockQuantity === undefined ? 999 : product.stockQuantity;
+
+    if (stock === 0) {
+      showToast('Sản phẩm đã hết hàng');
+      return;
+    }
+
     setCart(c => {
       const ex = c.find(i => i.id === id);
       if (ex) {
         const newQty = Math.min(ex.qty + qty, stock);
-        if (newQty === ex.qty) { showToast('Đã đạt số lượng tối đa trong kho'); return c; }
+        if (newQty === ex.qty) return c;
         return c.map(i => i.id === id ? { ...i, qty: newQty } : i);
       }
       return [...c, {

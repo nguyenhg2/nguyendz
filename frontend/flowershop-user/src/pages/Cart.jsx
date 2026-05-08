@@ -16,7 +16,6 @@ export default function CartPage() {
   if (!cart || cart.length === 0) return (
     <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 80, marginBottom: 20 }}>Giỏ hàng</div>
         <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Giỏ hàng trống</div>
         <div style={{ color: 'var(--muted)', marginBottom: 24 }}>Thêm sản phẩm vào giỏ để tiếp tục</div>
         <button className="btn btn-primary" onClick={() => navigate('home')}>Mua sắm ngay</button>
@@ -71,19 +70,18 @@ export default function CartPage() {
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 14 }}>{item.name}</div>
                           {item.sale && item.sale < item.price && <span className="badge badge-sale">Giảm giá</span>}
-                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>Còn {max} trong kho</div>
+                          {max < 999 && <div style={{ fontSize: 11, color: 'var(--muted)' }}>Còn {max} trong kho</div>}
                         </div>
                       </div>
                     </td>
                     <td style={{ color: 'var(--rose)', fontWeight: 700 }}>{fmt(item.sale || item.price)}</td>
                     <td>
-                      <div className="qty-ctrl" style={{ display: 'flex' }}>
-                        <button className="qty-btn" style={{ borderRadius: '8px 0 0 8px', padding: '6px 12px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer' }} onClick={() => updateCart(item.id, item.qty - 1)}>-</button>
+                      <div style={{ display: 'flex' }}>
+                        <button style={{ padding: '6px 12px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', borderRadius: '8px 0 0 8px' }} onClick={() => updateCart(item.id, item.qty - 1)}>-</button>
                         <input
                           type="number"
                           min="1"
                           max={max}
-                          className="qty-num"
                           value={item.qty}
                           onChange={e => {
                             const val = parseInt(e.target.value);
@@ -93,7 +91,7 @@ export default function CartPage() {
                           }}
                           style={{ width: 50, textAlign: 'center', border: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none' }}
                         />
-                        <button className="qty-btn" style={{ borderRadius: '0 8px 8px 0', padding: '6px 12px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer' }} disabled={item.qty >= max} onClick={() => handleIncrease(item)}>+</button>
+                        <button style={{ padding: '6px 12px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', borderRadius: '0 8px 8px 0' }} disabled={item.qty >= max} onClick={() => handleIncrease(item)}>+</button>
                       </div>
                     </td>
                     <td style={{ fontWeight: 800, fontSize: 15 }}>{fmt((item.sale || item.price) * item.qty)}</td>
