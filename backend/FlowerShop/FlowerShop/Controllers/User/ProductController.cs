@@ -10,16 +10,16 @@ namespace FlowerShop.Controllers.User
     public class ProductController : ControllerBase
     {
         private readonly FlowerContext _context;
-        public ProductController(FlowerContext context) 
-        { 
-            _context = context; 
+        public ProductController(FlowerContext context)
+        {
+            _context = context;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetProducts(
             [FromQuery] int? cat, [FromQuery] string? sort,
             [FromQuery] int page = 1, [FromQuery] int pageSize = 12,
-            [FromQuery] string? q=null, [FromQuery] string? priceRange=null)
+            [FromQuery] string? q = null, [FromQuery] string? priceRange = null)
         {
             (page, pageSize) = PagingHelper.Normalize(page, pageSize, defaultLimit: 12);
 
@@ -112,6 +112,7 @@ namespace FlowerShop.Controllers.User
                 categoryId = product.CategoryId,
                 rating = product.Rating ?? 0,
                 soldQuantity = product.SoldQuantity,
+                stockQuantity = product.StockQuantity,
                 isFeatured = product.IsFeatured,
                 createdDate = product.CreatedDate,
                 isNew = IsNew(product)
@@ -123,9 +124,9 @@ namespace FlowerShop.Controllers.User
             return new
             {
                 productId = product.ProductId,
-                id = product.ProductId,            
+                id = product.ProductId,
                 name = product.ProductName,
-                desc = product.Description,          
+                desc = product.Description,
                 price = product.Price,
                 sale = product.DiscountPrice,
                 imageUrl = GetMainImage(product),
@@ -139,7 +140,7 @@ namespace FlowerShop.Controllers.User
                 isNew = IsNew(product),
                 reviews = product.Reviews.Select(r => new
                 {
-                    id = r.ReviewId,                 
+                    id = r.ReviewId,
                     rating = r.Rating,
                     comment = r.Comment,
                     createdAt = r.CreatedDate,
@@ -167,8 +168,7 @@ namespace FlowerShop.Controllers.User
             return product.Images
                 .OrderByDescending(i => i.IsMain)
                 .ThenBy(i => i.Id)
-                .Select(i => new
-                ProductImageDto
+                .Select(i => new ProductImageDto
                 {
                     Id = i.Id,
                     ImageUrl = i.ImageUrl,
