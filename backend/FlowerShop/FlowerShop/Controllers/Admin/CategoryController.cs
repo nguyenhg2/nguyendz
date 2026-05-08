@@ -12,10 +12,12 @@ namespace FlowerShop.Controllers.Admin
     public class CategoryController : ControllerBase
     {
         private readonly FlowerContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public CategoryController(FlowerContext context)
+        public CategoryController(FlowerContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         [HttpGet]
@@ -70,7 +72,6 @@ namespace FlowerShop.Controllers.Admin
 
             c.CategoryName = data.CategoryName.Trim();
             c.Description = data.Description;
-            c.ImageUrl = data.ImageUrl;
             c.SortOrder = data.SortOrder;
             c.IsActive = data.IsActive;
 
@@ -96,6 +97,25 @@ namespace FlowerShop.Controllers.Admin
             c.IsActive = !c.IsActive;
             await _context.SaveChangesAsync();
             return Ok(new { id = c.CategoryId, isActive = c.IsActive });
+        }
+
+        [HttpPost("{id}/image")]
+        public async Task<IActionResult> UploadImage(int id, IFormFile file)
+        {
+            if (file == null) return BadRequest();
+            var c = await _context.Categories.FindAsync(id);
+            if (c == null) return NotFound();
+
+            var folder = Path.Combine(_env.WebRootPath, "uploads/categories");
+            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+            var fileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
+            using var stream = new FileStream(Path.Combine(folder, fileName), FileMode.Create);
+            await file.CopyToAsync(stream);
+
+            c.ImageUrl = "/uploads/categories/" + fileName;
+            await _context.SaveChangesAsync();
+            return Ok(new { imageUrl = c.ImageUrl });
         }
 
         private static string? ValidateCategory(Category category)

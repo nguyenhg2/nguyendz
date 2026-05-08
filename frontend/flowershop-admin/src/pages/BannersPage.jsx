@@ -39,12 +39,12 @@ export default function BannersPage() {
   useEffect(() => { load(); }, [load]);
 
   const openAdd = () => {
-    setForm({ title: '', linkUrl: '', imageUrl: '', sortOrder: 0, isActive: true });
+    setForm({ title: '', sortOrder: 0, isActive: true });
     setEditId(null); setImgFile(null); setModal(true);
   };
 
   const openEdit = (b) => {
-    setForm({ title: b.title || '', linkUrl: b.linkUrl || '', imageUrl: b.imageUrl || '', sortOrder: b.sortOrder || 0, isActive: !!b.isActive });
+    setForm({ title: b.title || '', sortOrder: b.sortOrder || 0, isActive: !!b.isActive, currentImage: b.imageUrl || '' });
     setEditId(b.bannerId); setImgFile(null); setModal(true);
   };
 
@@ -53,8 +53,9 @@ export default function BannersPage() {
     setSaving(true);
     try {
       let id = editId;
-      if (editId) { await bannerAPI.update(editId, form); }
-      else { const res = await bannerAPI.create(form); id = res.data.bannerId; }
+      const payload = { title: form.title, sortOrder: form.sortOrder, isActive: form.isActive };
+      if (editId) { await bannerAPI.update(editId, payload); }
+      else { const res = await bannerAPI.create(payload); id = res.data.bannerId; }
       if (imgFile && id) {
         const fd = new FormData();
         fd.append('file', imgFile);
@@ -94,15 +95,14 @@ export default function BannersPage() {
         <div className="tbl-wrapper">
           {loading ? <div className="spinner"/> : (
             <table>
-              <thead><tr><th>ID</th><th>Ảnh</th><th>Tiêu đề</th><th>Link</th><th>Thứ tự</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+              <thead><tr><th>ID</th><th>Ảnh</th><th>Tiêu đề</th><th>Thứ tự</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
               <tbody>
-                {list.length === 0 && <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40 }}>Không có banner</td></tr>}
+                {list.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40 }}>Không có banner</td></tr>}
                 {list.map(b => (
                   <tr key={b.bannerId}>
                     <td>#{b.bannerId}</td>
                     <td>{b.imageUrl && <img src={imgSrc(b.imageUrl)} alt="" style={{ width: 80, height: 40, objectFit: 'cover', borderRadius: 4 }}/>}</td>
                     <td style={{ fontWeight: 600 }}>{b.title}</td>
-                    <td>{b.linkUrl || '-'}</td>
                     <td>{b.sortOrder}</td>
                     <td>
                       <label className="switch">
@@ -131,12 +131,12 @@ export default function BannersPage() {
             <div className="modal-header"><h3>{editId ? 'Sửa banner' : 'Thêm banner'}</h3><button className="modal-close" onClick={() => setModal(false)}>X</button></div>
             <div className="modal-body">
               <div className="form-group"><label>Tiêu đề *</label><input value={form.title} onChange={e => setForm({...form, title: e.target.value})}/></div>
-              <div className="form-group"><label>Link URL</label><input value={form.linkUrl} onChange={e => setForm({...form, linkUrl: e.target.value})}/></div>
               <div className="form-group"><label>Thứ tự</label><input type="number" value={form.sortOrder} onChange={e => setForm({...form, sortOrder: parseInt(e.target.value) || 0})}/></div>
               <div className="form-group">
-                <label>Tải ảnh lên</label>
+                <label>Ảnh banner</label>
                 <input type="file" accept="image/*" onChange={e => setImgFile(e.target.files[0])}/>
                 {imgFile && <img src={URL.createObjectURL(imgFile)} alt="" style={{ width: 120, marginTop: 8, borderRadius: 4 }}/>}
+                {!imgFile && form.currentImage && <img src={imgSrc(form.currentImage)} alt="" style={{ width: 120, marginTop: 8, borderRadius: 4 }}/>}
               </div>
               <label><input type="checkbox" checked={!!form.isActive} onChange={e => setForm({...form, isActive: e.target.checked})}/> Hiển thị</label>
             </div>

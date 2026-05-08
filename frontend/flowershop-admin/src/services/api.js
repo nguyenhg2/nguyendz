@@ -52,6 +52,9 @@ export const categoryAPI = {
   update: (id, data) => api.put('/admin/categories/' + id, data),
   remove: (id) => api.delete('/admin/categories/' + id),
   toggle: (id) => api.patch('/admin/categories/' + id + '/toggle'),
+  uploadImage: (id, formData) => api.post('/admin/categories/' + id + '/image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
 
 export const productAPI = {

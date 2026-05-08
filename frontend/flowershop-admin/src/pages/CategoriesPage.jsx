@@ -20,6 +20,7 @@ export default function CategoriesPage() {
   const [editId, setEditId] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [imgFile, setImgFile] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,21 +39,28 @@ export default function CategoriesPage() {
   useEffect(() => { load(); }, [load]);
 
   const openAdd = () => {
-    setForm({ categoryName: '', description: '', imageUrl: '', sortOrder: 0, isActive: true });
-    setEditId(null); setModal(true);
+    setForm({ categoryName: '', description: '', sortOrder: 0, isActive: true });
+    setEditId(null); setImgFile(null); setModal(true);
   };
 
   const openEdit = (c) => {
-    setForm({ categoryName: c.categoryName, description: c.description || '', imageUrl: c.imageUrl || '', sortOrder: c.sortOrder || 0, isActive: !!c.isActive });
-    setEditId(c.categoryId); setModal(true);
+    setForm({ categoryName: c.categoryName, description: c.description || '', sortOrder: c.sortOrder || 0, isActive: !!c.isActive, currentImage: c.imageUrl || '' });
+    setEditId(c.categoryId); setImgFile(null); setModal(true);
   };
 
   const handleSave = async () => {
     if (!form.categoryName) { addToast('Vui lòng nhập tên danh mục', 'error'); return; }
     setSaving(true);
     try {
-      if (editId) { await categoryAPI.update(editId, form); }
-      else { await categoryAPI.create(form); }
+      let id = editId;
+      const payload = { categoryName: form.categoryName, description: form.description, sortOrder: form.sortOrder, isActive: form.isActive };
+      if (editId) { await categoryAPI.update(editId, payload); }
+      else { const res = await categoryAPI.create(payload); id = res.data.categoryId; }
+      if (imgFile && id) {
+        const fd = new FormData();
+        fd.append('file', imgFile);
+        await categoryAPI.uploadImage(id, fd);
+      }
       addToast(editId ? 'Cập nhật thành công' : 'Thêm thành công');
       setModal(false); load();
     } catch { addToast('Lỗi lưu danh mục', 'error'); }
@@ -129,7 +137,12 @@ export default function CategoriesPage() {
             <div className="modal-body">
               <div className="form-group"><label>Tên danh mục *</label><input value={form.categoryName} onChange={e => setForm({...form, categoryName: e.target.value})}/></div>
               <div className="form-group"><label>Mô tả</label><textarea rows={2} value={form.description} onChange={e => setForm({...form, description: e.target.value})}/></div>
-              <div className="form-group"><label>Link ảnh</label><input value={form.imageUrl} onChange={e => setForm({...form, imageUrl: e.target.value})}/></div>
+              <div className="form-group">
+                <label>Ảnh danh mục</label>
+                <input type="file" accept="image/*" onChange={e => setImgFile(e.target.files[0])}/>
+                {imgFile && <img src={URL.createObjectURL(imgFile)} alt="" style={{ width: 80, marginTop: 8, borderRadius: 4 }}/>}
+                {!imgFile && form.currentImage && <img src={imgSrc(form.currentImage)} alt="" style={{ width: 80, marginTop: 8, borderRadius: 4 }}/>}
+              </div>
               <div className="form-group"><label>Thứ tự hiển thị</label><input type="number" value={form.sortOrder} onChange={e => setForm({...form, sortOrder: parseInt(e.target.value) || 0})}/></div>
               <label><input type="checkbox" checked={!!form.isActive} onChange={e => setForm({...form, isActive: e.target.checked})}/> Hiển thị</label>
             </div>
