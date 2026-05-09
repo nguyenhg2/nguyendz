@@ -11,7 +11,7 @@ const imageSrc = (url) => {
 };
 
 export default function CartPage() {
-  const { cart, updateCart, cartTotal, navigate, showToast } = useContext(AppContext);
+  const { cart, updateCart, cartTotal, navigate } = useContext(AppContext);
 
   if (!cart || cart.length === 0) return (
     <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
@@ -22,15 +22,6 @@ export default function CartPage() {
       </div>
     </div>
   );
-
-  const handleIncrease = (item) => {
-    const max = item.stockQuantity || 999;
-    if (item.qty >= max) {
-      showToast('Đã đạt số lượng tối đa trong kho');
-      return;
-    }
-    updateCart(item.id, item.qty + 1);
-  };
 
   return (
     <div className="page">
@@ -76,9 +67,17 @@ export default function CartPage() {
                     </td>
                     <td style={{ color: 'var(--rose)', fontWeight: 700 }}>{fmt(item.sale || item.price)}</td>
                     <td>
-                      <div style={{ display: 'flex' }}>
-                        <button style={{ padding: '6px 12px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', borderRadius: '8px 0 0 8px' }} onClick={() => updateCart(item.id, item.qty - 1)}>-</button>
+                      <div className="qty-ctrl">
+                        <button
+                          className="qty-btn"
+                          type="button"
+                          disabled={item.qty <= 1}
+                          onClick={() => updateCart(item.id, item.qty - 1)}
+                        >
+                          -
+                        </button>
                         <input
+                          className="qty-num"
                           type="number"
                           min="1"
                           max={max}
@@ -89,9 +88,15 @@ export default function CartPage() {
                             if (val > max) { updateCart(item.id, max); return; }
                             updateCart(item.id, val);
                           }}
-                          style={{ width: 50, textAlign: 'center', border: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none' }}
                         />
-                        <button style={{ padding: '6px 12px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', borderRadius: '0 8px 8px 0' }} disabled={item.qty >= max} onClick={() => handleIncrease(item)}>+</button>
+                        <button
+                          className="qty-btn"
+                          type="button"
+                          disabled={item.qty >= max}
+                          onClick={() => updateCart(item.id, item.qty + 1)}
+                        >
+                          +
+                        </button>
                       </div>
                     </td>
                     <td style={{ fontWeight: 800, fontSize: 15 }}>{fmt((item.sale || item.price) * item.qty)}</td>

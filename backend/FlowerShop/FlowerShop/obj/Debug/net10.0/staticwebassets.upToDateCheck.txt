@@ -68,8 +68,11 @@ wwwroot\uploads\categories\141e7bbe-5809-4530-8769-f6d26d694057.webp
 wwwroot\uploads\categories\dfda45e2-888d-471d-a692-9bbad7ec3d15.webp
 wwwroot\uploads\products\12c368d2-104f-4197-a7bc-ecfa28f27840.jpg
 wwwroot\uploads\products\43494be6-640f-4129-af70-4f3e5252c3f6.jpg
+wwwroot\uploads\products\6b727eb3-5bf2-455e-98cb-8539fd647def.jpg
+wwwroot\uploads\products\a0592c77-692c-48bc-b659-696eeb37b4ca.jpg
 wwwroot\uploads\products\be98c300-5e48-47b1-a16e-e004ee55d2b8.jpg
 wwwroot\uploads\products\c22ef792-61e0-48b3-832b-00346a5de1da.jpg
+wwwroot\uploads\products\d2c12990-d797-4616-b092-68a77e4bbc41.jpg
 wwwroot\uploads\products\e5435800-ff49-4be9-8be0-dbdbd3354066.jpg
 C:\Users\admin\OneDrive\Documents\tranvanan\nguyendz\backend\FlowerShop\FlowerShop\wwwroot\css\site.css
 C:\Users\admin\OneDrive\Documents\tranvanan\nguyendz\backend\FlowerShop\FlowerShop\wwwroot\favicon.ico
