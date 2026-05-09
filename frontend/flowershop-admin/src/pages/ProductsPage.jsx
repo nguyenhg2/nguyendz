@@ -38,11 +38,23 @@ export default function ProductsPage() {
     () => imgFiles.map(file => ({ file, url: URL.createObjectURL(file) })),
     [imgFiles]
   );
+  const categoryMap = useMemo(
+    () => new Map(cats.map(c => [String(c.categoryId), c])),
+    [cats]
+  );
+  const getProductCategory = (product) => {
+    const categoryId = product.categoryId || product.category?.categoryId || product.category?.id;
+    const category = categoryMap.get(String(categoryId));
+    if (!product.category) return category || null;
+    return { ...category, ...product.category, isActive: product.category.isActive ?? category?.isActive };
+  };
+  const isProductLockedByCategory = (product) => getProductCategory(product)?.isActive === false;
+  const isCategoryLocked = form.categoryId ? categoryMap.get(String(form.categoryId))?.isActive === false : false;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { page, limit: LIMIT };
+      const params = { page, limit: LIMIT, includeInactive: true };
       if (search) params.search = search;
       if (catFilter) params.categoryId = catFilter;
       if (activeFilter !== '') params.isActive = activeFilter === 'true';
@@ -58,7 +70,7 @@ export default function ProductsPage() {
   }, [page, search, catFilter, activeFilter, featuredFilter, minPrice, maxPrice, sortBy]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { categoryAPI.getAll({ limit: 100 }).then(r => setCats(r.data.items || r.data || [])); }, []);
+  useEffect(() => { categoryAPI.getAll({ limit: 100, includeInactive: true }).then(r => setCats(r.data.items || r.data || [])); }, []);
   useEffect(() => () => filePreviews.forEach(p => URL.revokeObjectURL(p.url)), [filePreviews]);
 
   const resetFilter = () => { setSearch(''); setCatFilter(''); setActiveFilter(''); setFeaturedFilter(''); setMinPrice(''); setMaxPrice(''); setSortBy(''); setPage(1); };
@@ -107,7 +119,7 @@ export default function ProductsPage() {
     if (!form.productName || !form.price || !form.categoryId) { addToast('Điền đầy đủ tên, giá và danh mục', 'error'); return; }
     setSaving(true);
     try {
-      const payload = { ...form, price: parseFloat(form.price), discountPrice: form.discountPrice ? parseFloat(form.discountPrice) : null, stockQuantity: parseInt(form.stockQuantity) || 0 };
+      const payload = { ...form, isActive: isCategoryLocked ? false : !!form.isActive, price: parseFloat(form.price), discountPrice: form.discountPrice ? parseFloat(form.discountPrice) : null, stockQuantity: parseInt(form.stockQuantity) || 0 };
       let id = editId;
       if (editId) { await productAPI.update(editId, payload); }
       else { const res = await productAPI.create(payload); id = res.data.productId; }
@@ -142,7 +154,7 @@ export default function ProductsPage() {
         <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Tìm tên sản phẩm..." style={{ width: 200 }}/>
         <select value={catFilter} onChange={e => { setCatFilter(e.target.value); setPage(1); }} style={{ width: 160 }}>
           <option value="">Tất cả danh mục</option>
-          {cats.map(c => <option key={c.categoryId} value={c.categoryId}>{c.categoryName}</option>)}
+          {cats.map(c => <option key={c.categoryId} value={c.categoryId}>{c.categoryName}{c.isActive === false ? ' (Đã ẩn)' : ''}</option>)}
         </select>
         <select value={activeFilter} onChange={e => { setActiveFilter(e.target.value); setPage(1); }} style={{ width: 130 }}>
           <option value="">Trạng thái</option>
@@ -183,14 +195,17 @@ export default function ProductsPage() {
                         <span style={{ fontWeight: 600 }}>{p.productName}</span>
                       </div>
                     </td>
-                    <td>{p.category?.categoryName || '-'}</td>
+                    <td>
+                      <div>{getProductCategory(p)?.categoryName || '-'}</div>
+                      {isProductLockedByCategory(p) && <div className="text-muted" style={{ fontSize: 11 }}>Danh mục đã ẩn</div>}
+                    </td>
                     <td>{fmtVND(p.price)}</td>
                     <td>{p.discountPrice ? fmtVND(p.discountPrice) : '-'}</td>
                     <td>{p.stockQuantity}</td>
                     <td>{p.soldQuantity}</td>
                     <td>
-                      <label className="switch">
-                        <input type="checkbox" checked={!!p.isActive} onChange={() => productAPI.toggle(p.productId).then(load)}/>
+                      <label className={`switch${isProductLockedByCategory(p) ? ' switch-disabled' : ''}`} title={isProductLockedByCategory(p) ? 'Danh mục đã ẩn nên không thể đổi trạng thái sản phẩm' : ''}>
+                        <input type="checkbox" checked={!isProductLockedByCategory(p) && !!p.isActive} disabled={isProductLockedByCategory(p)} onChange={() => productAPI.toggle(p.productId).then(load)}/>
                         <span className="slider"/>
                       </label>
                     </td>
@@ -224,7 +239,7 @@ export default function ProductsPage() {
                 <div className="form-group"><label>Danh mục *</label>
                   <select value={form.categoryId} onChange={e => setForm({...form, categoryId: e.target.value})}>
                     <option value="">-- Chọn danh mục --</option>
-                    {cats.map(c => <option key={c.categoryId} value={c.categoryId}>{c.categoryName}</option>)}
+                    {cats.map(c => <option key={c.categoryId} value={c.categoryId}>{c.categoryName}{c.isActive === false ? ' (Đã ẩn)' : ''}</option>)}
                   </select>
                 </div>
                 <div className="form-group"><label>Tồn kho</label>
@@ -277,7 +292,9 @@ export default function ProductsPage() {
               </div>
               <div style={{ display: 'flex', gap: 16 }}>
                 <label><input type="checkbox" checked={!!form.isFeatured} onChange={e => setForm({...form, isFeatured: e.target.checked})}/> Nổi bật</label>
-                <label><input type="checkbox" checked={!!form.isActive} onChange={e => setForm({...form, isActive: e.target.checked})}/> Hiển thị</label>
+                <label title={isCategoryLocked ? 'Danh mục đã ẩn nên sản phẩm không thể kích hoạt' : ''}>
+                  <input type="checkbox" checked={!isCategoryLocked && !!form.isActive} disabled={isCategoryLocked} onChange={e => setForm({...form, isActive: e.target.checked})}/> Hiển thị
+                </label>
               </div>
             </div>
             <div className="modal-footer">
