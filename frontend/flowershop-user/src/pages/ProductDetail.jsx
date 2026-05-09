@@ -190,26 +190,32 @@ export function ProductDetailPage() {
               <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8, fontWeight: 700, textTransform: 'uppercase' }}>
                 Số lượng {stock > 0 && stock < 999 ? `(còn ${stock} sản phẩm)` : stock === 0 ? '(Hết hàng)' : ''}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+              <div className="qty-ctrl">
                 <button
+                  className="qty-btn"
+                  type="button"
                   onClick={() => setQty(q => Math.max(1, q - 1))}
-                  disabled={stock === 0}
-                  style={{ padding: '8px 15px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', borderRadius: '4px 0 0 4px' }}
-                >-</button>
+                  disabled={stock === 0 || qty <= 1}
+                >
+                  -
+                </button>
                 <input
+                  className="qty-num"
                   type="number"
                   min="1"
                   max={stock < 999 ? stock : undefined}
                   value={qty}
                   onChange={e => handleQtyChange(e.target.value)}
                   disabled={stock === 0}
-                  style={{ width: 60, textAlign: 'center', padding: '8px 4px', border: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none' }}
                 />
                 <button
+                  className="qty-btn"
+                  type="button"
                   onClick={() => setQty(q => Math.min(stock < 999 ? stock : q + 1, q + 1))}
                   disabled={stock === 0 || (stock < 999 && qty >= stock)}
-                  style={{ padding: '8px 15px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', borderRadius: '0 4px 4px 0' }}
-                >+</button>
+                >
+                  +
+                </button>
               </div>
             </div>
 
