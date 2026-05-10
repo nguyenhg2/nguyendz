@@ -1,6 +1,6 @@
 import { useContext, useState } from 'react';
 import { AppContext } from '../context/AppContext';
-import { sendContact } from '../services/api'; 
+import { sendContact } from '../services/api';
 
 export function ContactPage() {
   const { showToast } = useContext(AppContext);
@@ -21,8 +21,7 @@ export function ContactPage() {
       await sendContact(form);
       setSent(true);
       showToast('Tin nhắn của bạn đã được gửi đi!');
-    } catch (error) {
-      console.error("Lỗi gửi liên hệ:", error);
+    } catch {
       showToast('Gửi tin nhắn thất bại. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
@@ -38,11 +37,11 @@ export function ContactPage() {
         <div>
           <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 22, marginBottom: 20 }}>Thông tin shop</div>
           {[
-            ['📍', 'Địa chỉ', '123 Đường Hoa Mai, Phường Bến Nghé, Quận 1, TP.HCM'],
-            ['📞', 'Điện thoại', '0901 234 567 (Hỗ trợ 7:00 - 21:00)'],
-            ['✉️', 'Email', 'hello@monglan.vn'],
-            ['⏰', 'Giờ làm việc', 'Thứ 2 – Chủ nhật: 7:00 – 21:00'],
-            ['🚚', 'Giao hàng', 'Nội thành TP.HCM, giao trong 2-4 giờ']
+            ['ĐC', 'Địa chỉ', '123 Đường Hoa Mai, Phường Bến Nghé, Quận 1, TP.HCM'],
+            ['ĐT', 'Điện thoại', '0901 234 567 (Hỗ trợ 7:00 - 21:00)'],
+            ['@', 'Email', 'hello@monglan.vn'],
+            ['Giờ', 'Giờ làm việc', 'Thứ 2 - Chủ nhật: 7:00 - 21:00'],
+            ['Ship', 'Giao hàng', 'Nội thành TP.HCM, giao trong 2-4 giờ']
           ].map(([i, l, v]) => (
             <div key={l} style={{ display: 'flex', gap: 16, marginBottom: 20, alignItems: 'flex-start' }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--rose-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{i}</div>
@@ -53,9 +52,9 @@ export function ContactPage() {
             </div>
           ))}
           <div style={{ background: 'var(--warm)', borderRadius: 16, padding: 20, marginTop: 8 }}>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>🗺️ Bản đồ</div>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>Bản đồ</div>
             <div style={{ background: '#d4e8da', borderRadius: 12, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green)', fontWeight: 700, fontSize: 14 }}>
-              📍 Hoa Mộng Lan - Q.1, TP.HCM
+              Hoa Mộng Lan - Q.1, TP.HCM
             </div>
           </div>
         </div>
@@ -65,7 +64,6 @@ export function ContactPage() {
           
           {sent ? (
             <div className="alert alert-success" style={{ textAlign: 'center', padding: 30 }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Gửi thành công!</div>
               <div style={{ marginTop: 8, fontSize: 14 }}>Chúng tôi sẽ liên hệ với bạn sớm nhất có thể.</div>
               <button 
@@ -113,7 +111,7 @@ export function ContactPage() {
                 onClick={handleSubmit}
                 disabled={loading}
               >
-                {loading ? '⏳ Đang gửi...' : '📤 Gửi tin nhắn'}
+                {loading ? 'Đang gửi...' : 'Gửi tin nhắn'}
               </button>
             </>
           )}

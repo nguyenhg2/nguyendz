@@ -3,21 +3,21 @@ import { useAdmin } from '../context/AdminContext';
 
 const MENU = [
   { section: 'Tổng quan' },
-  { key: 'dashboard',  icon: '📊', label: 'Dashboard' },
+  { key: 'dashboard',  icon: 'DB', label: 'Dashboard' },
 
   { section: 'Nội dung' },
-  { key: 'categories', icon: '🗂️', label: 'Danh mục' },
-  { key: 'products',   icon: '🌸', label: 'Sản phẩm' },
-  { key: 'banners',    icon: '🖼️', label: 'Banner' },
+  { key: 'categories', icon: 'DM', label: 'Danh mục' },
+  { key: 'products',   icon: 'SP', label: 'Sản phẩm' },
+  { key: 'banners',    icon: 'BN', label: 'Banner' },
 
   { section: 'Kinh doanh' },
-  { key: 'orders',     icon: '📦', label: 'Đơn hàng' },
-  { key: 'customers',  icon: '👥', label: 'Khách hàng' },
-  { key: 'reviews',    icon: '⭐', label: 'Đánh giá' },
+  { key: 'orders',     icon: 'DH', label: 'Đơn hàng' },
+  { key: 'customers',  icon: 'KH', label: 'Khách hàng' },
+  { key: 'reviews',    icon: 'DG', label: 'Đánh giá' },
 
   { section: 'Hỗ trợ' },
-  { key: 'contacts',   icon: '✉️', label: 'Liên hệ' },
-  { key: 'reports',    icon: '📈', label: 'Báo cáo' },
+  { key: 'contacts',   icon: 'LH', label: 'Liên hệ' },
+  { key: 'reports',    icon: 'BC', label: 'Báo cáo' },
 ];
 
 export default function Sidebar() {
@@ -26,7 +26,7 @@ export default function Sidebar() {
   return (
     <aside className="admin-sidebar">
       <div className="sidebar-logo">
-        <span>🌸 Mộng Lan</span>
+        <span>Mộng Lan</span>
         <small>Admin Panel</small>
       </div>
 
@@ -58,7 +58,7 @@ export default function Sidebar() {
           </div>
         </div>
         <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', fontSize: 13 }} onClick={logout}>
-          🚪 Đăng xuất
+          Đăng xuất
         </button>
       </div>
     </aside>

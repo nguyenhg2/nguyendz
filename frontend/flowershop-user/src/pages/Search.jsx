@@ -29,8 +29,7 @@ export function SearchPage() {
 
         setProducts(items);
         setTotalItems(total);
-      } catch (error) {
-        console.error("Lỗi khi tìm kiếm sản phẩm:", error);
+      } catch {
         setProducts([]);
       } finally {
         setLoading(false);
@@ -55,7 +54,6 @@ export function SearchPage() {
 
       <div className="container">
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Lọc giá */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>Giá:</span>
             <select
@@ -72,7 +70,6 @@ export function SearchPage() {
             </select>
           </div>
 
-          {/* Lọc đánh giá */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>Đánh giá:</span>
             <select
@@ -90,7 +87,6 @@ export function SearchPage() {
 
           <div style={{ width: 1, height: 24, background: 'var(--border)', margin: '0 8px' }} />
 
-          {/* Sắp xếp */}
           <div style={{ display: 'flex', gap: 8 }}>
             {[
               ['newest', 'Mới nhất'],
@@ -121,7 +117,6 @@ export function SearchPage() {
           <div style={{ textAlign: 'center', padding: 80 }}>Đang tải dữ liệu...</div>
         ) : products.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
-            <div style={{ fontSize: 60, marginBottom: 16 }}>🔍</div>
             <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Không tìm thấy kết quả</div>
             <div style={{ color: 'var(--muted)', marginBottom: 20 }}>Thử tìm kiếm với từ khóa khác</div>
             <button className="btn btn-primary" onClick={() => navigate('home')}>Về trang chủ</button>

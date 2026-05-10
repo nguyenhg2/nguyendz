@@ -11,7 +11,7 @@ const imageSrc = (url) => {
 };
 
 export function ProfilePage() {
-  const { user, setUser, navigate, showToast, setShowLogin } = useContext(AppContext);
+  const { user, setUser, showToast, setShowLogin } = useContext(AppContext);
   const [tab, setTab] = useState('info');
   const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' });
   const [pwForm, setPwForm] = useState({ old: '', new1: '', new2: '' });

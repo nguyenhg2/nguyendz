@@ -65,13 +65,12 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginBottom: 24 }}>
         {[
-          { label: `Tổng doanh thu ${year}`,  value: fmtVND(totalRevenue),  icon: '💰', bg: 'linear-gradient(135deg,#c84b6b,#8b2d47)' },
-          { label: `Tổng đơn hàng ${year}`,   value: fmt(totalOrders),       icon: '📦', bg: 'linear-gradient(135deg,#3b82f6,#1e40af)' },
-          { label: 'Tháng doanh thu cao nhất', value: bestMonth ? `T${bestMonth.month}` : '—', icon: '🏆', bg: 'linear-gradient(135deg,#f59e0b,#b45309)' },
-          { label: 'Doanh thu tháng tốt nhất', value: bestMonth ? fmtVND(bestMonth.revenue) : '—', icon: '📈', bg: 'linear-gradient(135deg,#22c55e,#15803d)' },
+          { label: `Tổng doanh thu ${year}`,  value: fmtVND(totalRevenue),  icon: 'DT', bg: 'linear-gradient(135deg,#c84b6b,#8b2d47)' },
+          { label: `Tổng đơn hàng ${year}`,   value: fmt(totalOrders),       icon: 'DH', bg: 'linear-gradient(135deg,#3b82f6,#1e40af)' },
+          { label: 'Tháng doanh thu cao nhất', value: bestMonth ? `T${bestMonth.month}` : '-', icon: 'T', bg: 'linear-gradient(135deg,#f59e0b,#b45309)' },
+          { label: 'Doanh thu tháng tốt nhất', value: bestMonth ? fmtVND(bestMonth.revenue) : '-', icon: 'DT', bg: 'linear-gradient(135deg,#22c55e,#15803d)' },
         ].map(s => (
           <div key={s.label} className="stat-card" style={{ background: s.bg }}>
             <div className="stat-icon">{s.icon}</div>
@@ -81,10 +80,9 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {/* Revenue Bar Chart */}
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-header">
-          <span className="card-title">📊 Doanh thu & Đơn hàng theo tháng — {year}</span>
+          <span className="card-title">Doanh thu & Đơn hàng theo tháng - {year}</span>
         </div>
         <div className="card-body">
           {revenue.length === 0 ? (
@@ -109,11 +107,9 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Row: Top Products + Order Pie */}
       <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 20, marginBottom: 20 }}>
-        {/* Top products */}
         <div className="card">
-          <div className="card-header"><span className="card-title">🔥 Top 10 sản phẩm bán chạy</span></div>
+          <div className="card-header"><span className="card-title">Top 10 sản phẩm bán chạy</span></div>
           <div className="tbl-wrapper">
             <table>
               <thead>
@@ -134,7 +130,7 @@ export default function ReportsPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {p.imageUrl ? <img src={p.imageUrl} alt="" className="img-preview" style={{ width: 36, height: 36 }}/> : <div className="img-preview" style={{ width: 36, height: 36 }}>🌸</div>}
+                        {p.imageUrl ? <img src={p.imageUrl} alt="" className="img-preview" style={{ width: 36, height: 36 }}/> : <div className="img-preview" style={{ width: 36, height: 36 }} />}
                         <span style={{ fontWeight: 600, fontSize: 13 }}>{p.productName}</span>
                       </div>
                     </td>
@@ -148,7 +144,6 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Order status pie */}
         <div className="card">
           <div className="card-header"><span className="card-title">🥧 Tỷ lệ trạng thái đơn hàng</span></div>
           <div className="card-body">
@@ -158,7 +153,7 @@ export default function ReportsPage() {
               <>
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={orderPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                    <Pie data={orderPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false}>
                       {orderPieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]}/>)}
                     </Pie>
                     <Tooltip formatter={v => fmt(v) + ' đơn'}/>
@@ -181,10 +176,9 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Revenue trend line chart */}
       {revenue.length > 0 && (
         <div className="card">
-          <div className="card-header"><span className="card-title">📈 Xu hướng doanh thu — {year}</span></div>
+          <div className="card-header"><span className="card-title">Xu hướng doanh thu - {year}</span></div>
           <div className="card-body">
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={revenue}>
