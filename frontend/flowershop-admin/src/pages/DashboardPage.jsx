@@ -14,6 +14,10 @@ const STATUS_BADGE = {
   'Đã hủy':     'badge-cancelled',
 };
 
+const paymentLabel = (method) => {
+  return String(method || '').toLowerCase() === 'cod' ? 'COD' : 'Thanh toán';
+};
+
 export default function DashboardPage() {
   const { addToast } = useAdmin();
   const [stats,   setStats]   = useState(null);
@@ -46,10 +50,10 @@ export default function DashboardPage() {
   if (loading) return <div className="spinner"/>;
 
   const STAT_CARDS = [
-    { label:'Doanh thu hôm nay',  value: fmtVND(stats?.todayRevenue),   icon:'DT', bg:'linear-gradient(135deg,#c84b6b,#8b2d47)',  sub:`Tháng này: ${fmtVND(stats?.monthRevenue)}` },
-    { label:'Đơn hàng hôm nay',   value: fmt(stats?.todayOrders),        icon:'DH', bg:'linear-gradient(135deg,#3b82f6,#1e40af)',  sub:`Tổng: ${fmt(stats?.totalOrders)} đơn` },
-    { label:'Tổng sản phẩm',      value: fmt(stats?.totalProducts),      icon:'SP', bg:'linear-gradient(135deg,#22c55e,#15803d)',  sub:'Sản phẩm đang bán' },
-    { label:'Khách hàng',         value: fmt(stats?.totalCustomers),      icon:'KH', bg:'linear-gradient(135deg,#f97316,#c2410c)',  sub:'Đã đăng ký' },
+    { label:'Doanh thu hôm nay',  value: fmtVND(stats?.todayRevenue),   bg:'linear-gradient(135deg,#c84b6b,#8b2d47)',  sub:`Tháng này: ${fmtVND(stats?.monthRevenue)}` },
+    { label:'Đơn hàng hôm nay',   value: fmt(stats?.todayOrders),        bg:'linear-gradient(135deg,#3b82f6,#1e40af)',  sub:`Tổng: ${fmt(stats?.totalOrders)} đơn` },
+    { label:'Tổng sản phẩm',      value: fmt(stats?.totalProducts),      bg:'linear-gradient(135deg,#22c55e,#15803d)',  sub:'Sản phẩm đang bán' },
+    { label:'Khách hàng',         value: fmt(stats?.totalCustomers),      bg:'linear-gradient(135deg,#f97316,#c2410c)',  sub:'Đã đăng ký' },
   ];
 
   return (
@@ -57,7 +61,6 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16, marginBottom: 24 }}>
         {STAT_CARDS.map(s => (
           <div key={s.label} className="stat-card" style={{ background: s.bg }}>
-            <div className="stat-icon">{s.icon}</div>
             <div className="stat-label">{s.label}</div>
             <div className="stat-value">{s.value}</div>
             <div className="stat-sub">{s.sub}</div>
@@ -130,7 +133,7 @@ export default function DashboardPage() {
                   <td><span style={{ fontWeight: 600 }}>{o.receiverName}</span></td>
                   <td style={{ color: 'var(--muted)' }}>{o.receiverPhone}</td>
                   <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12 }}>{o.receiverAddress}</td>
-                  <td><span style={{ fontSize: 12 }}>{o.paymentMethod === 'COD' ? '💵 COD' : '🏦 CK'}</span></td>
+                  <td><span style={{ fontSize: 12 }}>{paymentLabel(o.paymentMethod)}</span></td>
                   <td><span style={{ fontWeight: 700, color: 'var(--primary)' }}>{fmtVND(o.totalAmount)}</span></td>
                   <td><span className={`badge ${STATUS_BADGE[o.status] || 'badge-pending'}`}>{o.status}</span></td>
                   <td style={{ color: 'var(--muted)', fontSize: 12 }}>{new Date(o.orderDate).toLocaleDateString('vi-VN')}</td>
