@@ -10,16 +10,76 @@ const imageSrc = (url) => {
   return '';
 };
 
+const isCompletedOrder = (order) => ['Completed', 'Hoàn thành'].includes(order?.status);
+const orderItems = (order) => order?.items || order?.orderDetails || [];
+const itemPrice = (item) => item.price || item.unitPrice || item.Price || 0;
+const itemQuantity = (item) => item.quantity || item.Quantity || 0;
+const itemTotal = (item) => item.subtotal || itemPrice(item) * itemQuantity(item);
+
 export function ProfilePage() {
   const { user, setUser, showToast, setShowLogin } = useContext(AppContext);
   const [tab, setTab] = useState('info');
-  const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' });
+  const [form, setForm] = useState({ name: user?.fullName || user?.name || '', email: user?.email || '', phone: user?.phone || '' });
   const [pwForm, setPwForm] = useState({ old: '', new1: '', new2: '' });
   const [viewOrder, setViewOrder] = useState(null);
   const [realOrders, setRealOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const exportInvoice = () => {
+    if (!isCompletedOrder(viewOrder)) {
+      showToast('Chỉ xuất được hóa đơn khi đơn hàng đã hoàn thành');
+      return;
+    }
+
+    const rows = orderItems(viewOrder).map(item => `
+      <tr>
+        <td>${item.productName || item.name || ''}</td>
+        <td>${itemQuantity(item)}</td>
+        <td>${fmt(itemPrice(item))}</td>
+        <td>${fmt(itemTotal(item))}</td>
+      </tr>
+    `).join('');
+
+    const html = `
+      <html>
+        <head>
+          <title>Hoa don #${viewOrder.orderId || viewOrder.id}</title>
+          <style>
+            body{font-family:Arial,sans-serif;padding:24px;color:#222}
+            h2{text-align:center;margin:0 0 20px}
+            p{margin:4px 0}
+            table{width:100%;border-collapse:collapse;margin-top:18px}
+            th,td{border:1px solid #ddd;padding:8px;text-align:left}
+            th{background:#f5f5f5}
+            .total{text-align:right;margin-top:16px;font-size:18px;font-weight:700}
+          </style>
+        </head>
+        <body>
+          <h2>Hóa đơn bán hàng</h2>
+          <p><b>Mã đơn:</b> #${viewOrder.orderId || viewOrder.id}</p>
+          <p><b>Khách hàng:</b> ${viewOrder.customerName || user.fullName || user.name || '-'}</p>
+          <p><b>Người nhận:</b> ${viewOrder.receiverName || '-'}</p>
+          <p><b>SĐT:</b> ${viewOrder.receiverPhone || '-'}</p>
+          <p><b>Địa chỉ:</b> ${viewOrder.receiverAddress || viewOrder.shippingAddress || viewOrder.address || '-'}</p>
+          <p><b>Thanh toán:</b> ${String(viewOrder.paymentMethod || '').toLowerCase() === 'cod' ? 'COD' : 'Chuyển khoản'}</p>
+          <table>
+            <thead><tr><th>Sản phẩm</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="total">Tổng: ${fmt(viewOrder.totalAmount || viewOrder.totalPrice || viewOrder.total || 0)}</div>
+        </body>
+      </html>
+    `;
+
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
+  };
 
   useEffect(() => {
     if (user && tab === 'orders') {
@@ -83,7 +143,7 @@ export function ProfilePage() {
                 <div className="form-group"><label>Số điện thoại</label><input value={form.phone} onChange={e => set('phone', e.target.value)} /></div>
               </div>
               <div className="form-group"><label>Email</label><input value={form.email} disabled style={{ background: '#f5f5f5' }} /></div>
-              <button className="btn btn-primary" onClick={() => { setUser(u => ({ ...u, ...form })); showToast('Cập nhật thông tin thành công!'); }}>Lưu thay đổi</button>
+              <button className="btn btn-primary" onClick={() => { const nextUser = { ...user, fullName: form.name, name: form.name, phone: form.phone }; setUser(nextUser); localStorage.setItem('user', JSON.stringify(nextUser)); showToast('Cập nhật thông tin thành công!'); }}>Lưu thay đổi</button>
             </>
           )}
 
@@ -133,6 +193,7 @@ export function ProfilePage() {
                 <button className="btn btn-ghost" onClick={() => setViewOrder(null)}>Quay lại</button>
                 <div style={{ fontWeight: 800, fontSize: 17 }}>Chi tiết đơn #{viewOrder.orderId?.toString().padStart(4, '0')}</div>
                 <span className={`status-badge ${statusClass[viewOrder.status]}`}>{viewOrder.status}</span>
+                {isCompletedOrder(viewOrder) && <button className="btn btn-primary" onClick={exportInvoice}>Xuất hóa đơn</button>}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
                 <div style={{ padding: 16, background: 'var(--warm)', borderRadius: 12 }}>
@@ -153,7 +214,7 @@ export function ProfilePage() {
               <table>
                 <thead><tr><th>Sản phẩm</th><th>Số lượng</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
                 <tbody>
-                  {(viewOrder.items || viewOrder.orderDetails || []).map((i, idx) => (
+                  {orderItems(viewOrder).map((i, idx) => (
                     <tr key={i.id || idx}>
                       <td>
                         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -165,9 +226,9 @@ export function ProfilePage() {
                           <span style={{ fontWeight: 600, fontSize: 14 }}>{i.productName || i.name}</span>
                         </div>
                       </td>
-                      <td>{i.quantity || i.Quantity || 0}</td>
-                      <td>{fmt(i.price || i.unitPrice || i.Price || 0)}</td>
-                      <td style={{ fontWeight: 700 }}>{fmt(i.subtotal || (i.price || i.unitPrice || i.Price || 0) * (i.quantity || i.Quantity || 0))}</td>
+                      <td>{itemQuantity(i)}</td>
+                      <td>{fmt(itemPrice(i))}</td>
+                      <td style={{ fontWeight: 700 }}>{fmt(itemTotal(i))}</td>
                     </tr>
                   ))}
                 </tbody>

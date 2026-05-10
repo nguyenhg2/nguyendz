@@ -13,7 +13,7 @@ const imageSrc = (url) => {
 export function CheckoutPage() {
   const { cart, cartTotal, navigate, showToast, user, clearCart } = useContext(AppContext);
   const [form, setForm] = useState({
-    name: user?.name || '',
+    name: user?.fullName || user?.name || '',
     phone: user?.phone || '',
     address: '',
     note: '',
@@ -35,6 +35,11 @@ export function CheckoutPage() {
   };
 
   const placeOrder = async () => {
+    if (!user) {
+      showToast('Vui lòng đăng nhập trước khi đặt hàng', 'error');
+      return;
+    }
+
     if (!validate()) return;
     setIsSubmitting(true);
 

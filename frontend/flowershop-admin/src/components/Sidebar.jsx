@@ -3,21 +3,21 @@ import { useAdmin } from '../context/AdminContext';
 
 const MENU = [
   { section: 'Tổng quan' },
-  { key: 'dashboard',  icon: 'DB', label: 'Dashboard' },
+  { key: 'dashboard', label: 'Dashboard' },
 
   { section: 'Nội dung' },
-  { key: 'categories', icon: 'DM', label: 'Danh mục' },
-  { key: 'products',   icon: 'SP', label: 'Sản phẩm' },
-  { key: 'banners',    icon: 'BN', label: 'Banner' },
+  { key: 'categories', label: 'Danh mục' },
+  { key: 'products', label: 'Sản phẩm' },
+  { key: 'banners', label: 'Banner' },
 
   { section: 'Kinh doanh' },
-  { key: 'orders',     icon: 'DH', label: 'Đơn hàng' },
-  { key: 'customers',  icon: 'KH', label: 'Khách hàng' },
-  { key: 'reviews',    icon: 'DG', label: 'Đánh giá' },
+  { key: 'orders', label: 'Đơn hàng' },
+  { key: 'customers', label: 'Khách hàng' },
+  { key: 'reviews', label: 'Đánh giá' },
 
   { section: 'Hỗ trợ' },
-  { key: 'contacts',   icon: 'LH', label: 'Liên hệ' },
-  { key: 'reports',    icon: 'BC', label: 'Báo cáo' },
+  { key: 'contacts', label: 'Liên hệ' },
+  { key: 'reports', label: 'Báo cáo' },
 ];
 
 export default function Sidebar() {
@@ -40,7 +40,6 @@ export default function Sidebar() {
               className={`nav-item${page === item.key ? ' active' : ''}`}
               onClick={() => navigate(item.key)}
             >
-              <span className="icon">{item.icon}</span>
               {item.label}
             </div>
           )

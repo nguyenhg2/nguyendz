@@ -35,6 +35,16 @@ namespace FlowerShop.Controllers.User
             if (product == null)
                 return NotFound(new { message = "Sản phẩm không tồn tại" });
 
+            var boughtProduct = await _context.OrderDetails
+                .AnyAsync(detail =>
+                    detail.ProductId == request.ProductId &&
+                    detail.Order != null &&
+                    detail.Order.UserId == userId.Value &&
+                    OrderStatus.CompletedValues.Contains(detail.Order.Status));
+
+            if (!boughtProduct)
+                return BadRequest(new { message = "Bạn chỉ có thể đánh giá sản phẩm đã mua và đơn hàng đã hoàn thành" });
+
             var review = await _context.Reviews
                 .FirstOrDefaultAsync(r => r.ProductId == request.ProductId && r.UserId == userId.Value);
 

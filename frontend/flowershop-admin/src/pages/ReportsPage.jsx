@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { reportAPI } from '../services/api';
+import { IMG_URL, reportAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -10,6 +10,12 @@ const fmt    = n => new Intl.NumberFormat('vi-VN').format(n || 0);
 const fmtVND = n => fmt(n) + 'đ';
 
 const PIE_COLORS = ['#c84b6b', '#3b82f6', '#22c55e', '#f97316', '#8b5cf6'];
+
+const imageSrc = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return IMG_URL + url;
+};
 
 export default function ReportsPage() {
   const { addToast } = useAdmin();
@@ -130,7 +136,7 @@ export default function ReportsPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {p.imageUrl ? <img src={p.imageUrl} alt="" className="img-preview" style={{ width: 36, height: 36 }}/> : <div className="img-preview" style={{ width: 36, height: 36 }} />}
+                        {p.imageUrl ? <img src={imageSrc(p.imageUrl)} alt="" className="img-preview" style={{ width: 36, height: 36 }}/> : <div className="img-preview" style={{ width: 36, height: 36 }} />}
                         <span style={{ fontWeight: 600, fontSize: 13 }}>{p.productName}</span>
                       </div>
                     </td>
@@ -145,7 +151,7 @@ export default function ReportsPage() {
         </div>
 
         <div className="card">
-          <div className="card-header"><span className="card-title">🥧 Tỷ lệ trạng thái đơn hàng</span></div>
+          <div className="card-header"><span className="card-title">Tỷ lệ trạng thái đơn hàng</span></div>
           <div className="card-body">
             {orderPieData.length === 0 ? (
               <div className="empty-state"><p>Chưa có dữ liệu đơn hàng</p></div>

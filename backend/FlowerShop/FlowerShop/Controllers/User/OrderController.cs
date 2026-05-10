@@ -57,7 +57,8 @@ namespace FlowerShop.Controllers.Api
                 var orderResult = CreateOrderDetails(dto.Items, products);
                 if (orderResult.Error != null) return BadRequest(new { message = orderResult.Error });
 
-                var order = CreateOrder(dto, userId.Value, orderResult.TotalAmount);
+                var shippingFee = GetShippingFee(orderResult.TotalAmount);
+                var order = CreateOrder(dto, userId.Value, orderResult.TotalAmount + shippingFee);
 
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
@@ -95,7 +96,7 @@ namespace FlowerShop.Controllers.Api
                     OrderId = order.OrderId,
                     OrderDate = order.OrderDate,
                     TotalAmount = order.TotalAmount,
-                    Status = order.Status,
+                    Status = OrderStatus.Normalize(order.Status),
                     CustomerName = order.User != null ? order.User.FullName : null,
                     ReceiverName = order.ReceiverName,
                     ReceiverPhone = order.ReceiverPhone,
@@ -125,8 +126,19 @@ namespace FlowerShop.Controllers.Api
                 return "Đơn hàng phải có sản phẩm";
             if (dto.Items.Any(x => x.Quantity <= 0))
                 return "Số lượng sản phẩm không hợp lệ";
+            if (string.IsNullOrWhiteSpace(dto.ReceiverName))
+                return "Vui lòng nhập tên người nhận";
+            if (string.IsNullOrWhiteSpace(dto.ReceiverPhone))
+                return "Vui lòng nhập số điện thoại";
+            if (string.IsNullOrWhiteSpace(dto.ReceiverAddress))
+                return "Vui lòng nhập địa chỉ giao hàng";
 
             return null;
+        }
+
+        private static decimal GetShippingFee(decimal productsTotal)
+        {
+            return productsTotal >= 500000 ? 0 : 30000;
         }
 
         private static Order CreateOrder(CreateOrderDto dto, int userId, decimal totalAmount)
@@ -139,10 +151,15 @@ namespace FlowerShop.Controllers.Api
                 ReceiverPhone = dto.ReceiverPhone?.Trim(),
                 ReceiverAddress = dto.ReceiverAddress?.Trim(),
                 Note = dto.Note?.Trim(),
-                PaymentMethod = dto.PaymentMethod?.Trim(),
-                Status = "Chờ xử lý",
+                PaymentMethod = NormalizePaymentMethod(dto.PaymentMethod),
+                Status = OrderStatus.Pending,
                 TotalAmount = totalAmount
             };
+        }
+
+        private static string NormalizePaymentMethod(string? value)
+        {
+            return string.Equals(value?.Trim(), "cod", StringComparison.OrdinalIgnoreCase) ? "cod" : "transfer";
         }
 
         private static OrderDetailsResult CreateOrderDetails(List<OrderItemDto> items, List<Product> products)

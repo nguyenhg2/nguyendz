@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
 using Microsoft.AspNetCore.Authorization;
 
+using FlowerShop.Common;
+
 namespace FlowerShop.Controllers.Admin
 {
     [Route("api/admin/reports")] 
@@ -22,7 +24,7 @@ namespace FlowerShop.Controllers.Admin
         {
             var query = _context.Orders
                 .AsNoTracking()
-                .Where(o => o.Status == "Hoàn thành" && o.OrderDate.HasValue && o.OrderDate.Value.Year == year);
+                .Where(o => OrderStatus.CompletedValues.Contains(o.Status) && o.OrderDate.HasValue && o.OrderDate.Value.Year == year);
 
             if (month.HasValue)
             {
@@ -32,13 +34,15 @@ namespace FlowerShop.Controllers.Admin
                     .GroupBy(o => o.OrderDate!.Value.Day)
                     .Select(g => new {
                         Day = g.Key,
-                        Value = g.Sum(o => o.TotalAmount ?? 0)
+                        Revenue = g.Sum(o => o.TotalAmount ?? 0),
+                        Orders = g.Count()
                     })
                     .OrderBy(x => x.Day)
                     .ToListAsync();
                 var dailyData = dailyDataRaw.Select(x => new {
-                    label = $"Ngày {x.Day}",
-                    value = x.Value
+                    day = x.Day,
+                    revenue = x.Revenue,
+                    orders = x.Orders
                 });
 
                 return Ok(dailyData);
@@ -49,13 +53,15 @@ namespace FlowerShop.Controllers.Admin
                     .GroupBy(o => o.OrderDate!.Value.Month)
                     .Select(g => new {
                         Month = g.Key,
-                        Value = g.Sum(o => o.TotalAmount ?? 0)
+                        Revenue = g.Sum(o => o.TotalAmount ?? 0),
+                        Orders = g.Count()
                     })
                     .OrderBy(x => x.Month)
                     .ToListAsync();
                 var monthlyData = monthlyDataRaw.Select(x => new {
-                    label = $"Tháng {x.Month}",
-                    value = x.Value
+                    month = x.Month,
+                    revenue = x.Revenue,
+                    orders = x.Orders
                 });
 
                 return Ok(monthlyData);
@@ -70,13 +76,17 @@ namespace FlowerShop.Controllers.Admin
 
             var topProducts = await _context.Products
                 .AsNoTracking()
+                .Include(p => p.Category)
                 .OrderByDescending(p => p.SoldQuantity)
                 .Take(limit)
                 .Select(p => new {
-                    name = p.ProductName,
-                    sold = p.SoldQuantity,
-                    revenue = _context.OrderDetails
-                        .Where(od => od.ProductId == p.ProductId && od.Order != null && od.Order.Status == "Hoàn thành")
+                    productId = p.ProductId,
+                    productName = p.ProductName,
+                    categoryName = p.Category != null ? p.Category.CategoryName : "",
+                    imageUrl = p.ImageUrl,
+                    soldQuantity = p.SoldQuantity,
+                    totalRevenue = _context.OrderDetails
+                        .Where(od => od.ProductId == p.ProductId && od.Order != null && OrderStatus.CompletedValues.Contains(od.Order.Status))
                         .Sum(od => od.Subtotal ?? 0)
                 })
                 .ToListAsync();
@@ -96,7 +106,14 @@ namespace FlowerShop.Controllers.Admin
                 })
                 .ToListAsync();
 
-            return Ok(stats);
+            return Ok(new
+            {
+                pending = stats.Where(x => OrderStatus.Normalize(x.status) == OrderStatus.Pending).Sum(x => x.count),
+                confirmed = stats.Where(x => OrderStatus.Normalize(x.status) == OrderStatus.Confirmed).Sum(x => x.count),
+                shipping = stats.Where(x => OrderStatus.Normalize(x.status) == OrderStatus.Shipping).Sum(x => x.count),
+                done = stats.Where(x => OrderStatus.Normalize(x.status) == OrderStatus.Completed).Sum(x => x.count),
+                cancelled = stats.Where(x => OrderStatus.Normalize(x.status) == OrderStatus.Cancelled).Sum(x => x.count)
+            });
         }
     }
 }

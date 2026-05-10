@@ -42,7 +42,8 @@ export function ProductDetailPage() {
         setSelectedImage(productData.images?.[0]?.imageUrl || productData.imageUrl || '');
         setQty(1);
 
-        const relatedRes = await getProducts({ category: productData.categoryId });
+        const categoryId = productData.categoryId || productData.cat;
+        const relatedRes = await getProducts({ category: categoryId });
         const relatedItems = relatedRes.data.items || relatedRes.data || [];
         setRelated(
           relatedItems
@@ -108,7 +109,7 @@ export function ProductDetailPage() {
   if (!p) return <div style={{ padding: 100, textAlign: 'center' }}>Sản phẩm không tồn tại.</div>;
 
   const discount = p.sale ? Math.round((1 - p.sale / p.price) * 100) : 0;
-  const currentCat = categories.find(c => (c.categoryId || c.id) === p.cat);
+  const currentCat = categories.find(c => (c.categoryId || c.id) === (p.categoryId || p.cat));
   const galleryImages = (p.images?.length ? p.images : [{ id: 'main', imageUrl: p.imageUrl }])
     .filter(x => x.imageUrl);
   const mainImageSrc = imageSrc(selectedImage || p.imageUrl);
@@ -118,7 +119,7 @@ export function ProductDetailPage() {
       <div style={{ background: 'var(--warm)', padding: '14px 0', marginBottom: 28 }}>
         <div className="container" style={{ fontSize: 13, color: 'var(--muted)' }}>
           <span style={{ cursor: 'pointer' }} onClick={() => navigate('home')}>Trang chủ</span> {'>'}{' '}
-          <span style={{ cursor: 'pointer' }} onClick={() => navigate('category', { cat: p.cat })}>
+          <span style={{ cursor: 'pointer' }} onClick={() => navigate('category', { id: p.categoryId || p.cat })}>
             {currentCat?.categoryName || currentCat?.name || 'Sản phẩm'}
           </span> {'>'}{' '}
           {p.name}
@@ -315,7 +316,7 @@ export function ProductDetailPage() {
           <div style={{ marginTop: 60 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h2 className="section-title" style={{ margin: 0 }}>Sản phẩm tương tự</h2>
-              <button className="btn btn-ghost" onClick={() => navigate('category', { cat: p.cat })}>Xem thêm</button>
+              <button className="btn btn-ghost" onClick={() => navigate('category', { id: p.categoryId || p.cat })}>Xem thêm</button>
             </div>
             <div className="grid-4">
               {related.map(item => <ProductCard key={item.productId || item.id} product={item} />)}
