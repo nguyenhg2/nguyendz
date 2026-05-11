@@ -9,7 +9,10 @@ namespace FlowerShop.Controllers.User
     public class BannerController : ControllerBase
     {
         private readonly FlowerContext _context;
-        public BannerController(FlowerContext context) { _context = context; }
+        public BannerController(FlowerContext context) 
+        { 
+            _context = context; 
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetBanners()

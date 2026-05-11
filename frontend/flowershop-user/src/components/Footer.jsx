@@ -62,11 +62,16 @@ export default function Footer() {
           </div>
 
           <div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: '#f7d6df', marginBottom: 14, textTransform: 'uppercase', letterSpacing: .5 }}>Liên hệ</div>
+            <div
+              onClick={() => navigate('contact')}
+              style={{ fontWeight: 700, fontSize: 14, color: '#f7d6df', marginBottom: 14, textTransform: 'uppercase', letterSpacing: .5, cursor: 'pointer' }}
+            >
+              Liên hệ
+            </div>
             <div style={{ fontSize: 13, lineHeight: 2 }}>
-              <div>123 Đường Hoa Mai, Q.1, TP.HCM</div>
-              <div>0901 234 567</div>
-              <div>hello@monglan.vn</div>
+              <div>236, Hoàng Quốc Việt, Nghĩa Đô, Hà Nội</div>
+              <div>0914 132 630</div>
+              <div>putinl@monglan.vn</div>
               <div>7:00 – 21:00 mỗi ngày</div>
             </div>
           </div>

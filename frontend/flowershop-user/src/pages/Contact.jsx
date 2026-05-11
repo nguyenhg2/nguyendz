@@ -38,11 +38,11 @@ export function ContactPage() {
         <div>
           <div style={{ fontFamily: 'Playfair Display,serif', fontSize: 22, marginBottom: 20 }}>Thông tin shop</div>
           {[
-            ['📍', 'Địa chỉ', '123 Đường Hoa Mai, Phường Bến Nghé, Quận 1, TP.HCM'],
-            ['📞', 'Điện thoại', '0901 234 567 (Hỗ trợ 7:00 - 21:00)'],
-            ['✉️', 'Email', 'hello@monglan.vn'],
+            ['📍', 'Địa chỉ', '236, Hoàng Quốc Việt, Nghĩa Đô, Hà Nội'],
+            ['📞', 'Điện thoại', '0914 132 630 (Hỗ trợ 7:00 - 21:00)'],
+            ['✉️', 'Email', 'putinl@monglan.vn'],
             ['⏰', 'Giờ làm việc', 'Thứ 2 – Chủ nhật: 7:00 – 21:00'],
-            ['🚚', 'Giao hàng', 'Nội thành TP.HCM, giao trong 2-4 giờ']
+            ['🚚', 'Giao hàng', 'Nội thành Hà Nội, giao trong 2-4 giờ']
           ].map(([i, l, v]) => (
             <div key={l} style={{ display: 'flex', gap: 16, marginBottom: 20, alignItems: 'flex-start' }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--rose-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{i}</div>
@@ -54,9 +54,22 @@ export function ContactPage() {
           ))}
           <div style={{ background: 'var(--warm)', borderRadius: 16, padding: 20, marginTop: 8 }}>
             <div style={{ fontWeight: 700, marginBottom: 8 }}>🗺️ Bản đồ</div>
-            <div style={{ background: '#d4e8da', borderRadius: 12, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green)', fontWeight: 700, fontSize: 14 }}>
-              📍 Hoa Mộng Lan - Q.1, TP.HCM
+            <div style={{ borderRadius: 12, height: 220, overflow: 'hidden', border: '1px solid var(--border)', background: '#d4e8da' }}>
+              <iframe
+                title="Bản đồ Hoa Mộng Lan"
+                src="https://www.openstreetmap.org/export/embed.html?bbox=105.7879%2C21.0420%2C105.8006%2C21.0516&layer=mapnik&marker=21.0468%2C105.7943"
+                style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
+                loading="lazy"
+              />
             </div>
+            <a
+              href="https://www.openstreetmap.org/?mlat=21.046856&mlon=105.785453#map=18/21.046856/105.7943"
+              target="_blank"
+              rel="noreferrer"
+              style={{ display: 'inline-block', marginTop: 10, fontSize: 13, color: 'var(--green)', fontWeight: 700 }}
+            >
+              Xem bản đồ lớn
+            </a>
           </div>
         </div>
         <div style={{ background: '#fff', borderRadius: 20, border: '1px solid var(--border)', padding: 32 }}>

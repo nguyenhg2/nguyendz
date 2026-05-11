@@ -3,6 +3,7 @@ using FlowerShop.Data;
 using FlowerShop.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using System.ComponentModel.DataAnnotations;
 
 namespace FlowerShop.Controllers.User
 {
