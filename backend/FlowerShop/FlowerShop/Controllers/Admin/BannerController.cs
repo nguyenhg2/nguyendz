@@ -28,7 +28,7 @@ namespace FlowerShop.Controllers.Admin
 
             var q = _context.Banners.AsNoTracking().AsQueryable();
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(b => (b.Title ?? "").Contains(search));
+                q = q.Where(b =>( b.Title ?? "").Contains(search));
             if (!includeInactive && !isActive.HasValue)
                 q = q.Where(b => b.IsActive == true);
             if (isActive.HasValue)
