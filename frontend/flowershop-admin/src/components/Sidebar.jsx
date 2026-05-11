@@ -3,21 +3,21 @@ import { useAdmin } from '../context/AdminContext';
 
 const MENU = [
   { section: 'Tổng quan' },
-  { key: 'dashboard',  icon: '📊', label: 'Dashboard' },
+  { key: 'dashboard', label: 'Dashboard' },
 
   { section: 'Nội dung' },
-  { key: 'categories', icon: '🗂️', label: 'Danh mục' },
-  { key: 'products',   icon: '🌸', label: 'Sản phẩm' },
-  { key: 'banners',    icon: '🖼️', label: 'Banner' },
+  { key: 'categories', label: 'Danh mục' },
+  { key: 'products', label: 'Sản phẩm' },
+  { key: 'banners', label: 'Banner' },
 
   { section: 'Kinh doanh' },
-  { key: 'orders',     icon: '📦', label: 'Đơn hàng' },
-  { key: 'customers',  icon: '👥', label: 'Khách hàng' },
-  { key: 'reviews',    icon: '⭐', label: 'Đánh giá' },
+  { key: 'orders', label: 'Đơn hàng' },
+  { key: 'customers', label: 'Khách hàng' },
+  { key: 'reviews', label: 'Đánh giá' },
 
   { section: 'Hỗ trợ' },
-  { key: 'contacts',   icon: '✉️', label: 'Liên hệ' },
-  { key: 'reports',    icon: '📈', label: 'Báo cáo' },
+  { key: 'contacts', label: 'Liên hệ' },
+  { key: 'reports', label: 'Báo cáo' },
 ];
 
 export default function Sidebar() {
@@ -26,7 +26,7 @@ export default function Sidebar() {
   return (
     <aside className="admin-sidebar">
       <div className="sidebar-logo">
-        <span>🌸 Mộng Lan</span>
+        <span>Mộng Lan</span>
         <small>Admin Panel</small>
       </div>
 
@@ -40,7 +40,6 @@ export default function Sidebar() {
               className={`nav-item${page === item.key ? ' active' : ''}`}
               onClick={() => navigate(item.key)}
             >
-              <span className="icon">{item.icon}</span>
               {item.label}
             </div>
           )
@@ -58,7 +57,7 @@ export default function Sidebar() {
           </div>
         </div>
         <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', fontSize: 13 }} onClick={logout}>
-          🚪 Đăng xuất
+          Đăng xuất
         </button>
       </div>
     </aside>

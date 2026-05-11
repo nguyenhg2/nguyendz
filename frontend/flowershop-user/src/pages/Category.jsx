@@ -19,14 +19,12 @@ export default function CategoryPage() {
 
   const pageSize = 12;
 
-  // Load danh mục
   useEffect(() => {
     getCategories().then(res => {
       setCategories(res.data.items || res.data || []);
     }).catch(() => {});
   }, []);
 
-  // Load sản phẩm
   useEffect(() => {
     loadProducts();
   }, [categoryId, sort, page, priceRange, ratingFilter]);
@@ -85,7 +83,6 @@ export default function CategoryPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px 16px' }}>
-      {/* Header */}
       <div style={{ marginBottom: 20, padding: 20, background: '#f8f9fa', borderRadius: 10 }}>
         <h2 style={{ margin: 0, fontSize: 22 }}>
           {currentCategory?.categoryName || currentCategory?.name || 'Tất cả sản phẩm'}
@@ -94,10 +91,8 @@ export default function CategoryPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 24 }}>
-        {/* Sidebar */}
         <div style={{ width: 220, flexShrink: 0 }}>
 
-          {/* Danh mục */}
           <div style={sidebarBox}>
             <h4 style={sidebarTitle}>Danh mục</h4>
             <div
@@ -121,7 +116,6 @@ export default function CategoryPage() {
             })}
           </div>
 
-          {/* Lọc theo giá */}
           <div style={sidebarBox}>
             <h4 style={sidebarTitle}>Khoảng giá</h4>
             {[
@@ -142,7 +136,6 @@ export default function CategoryPage() {
             ))}
           </div>
 
-          {/* Lọc theo đánh giá */}
           <div style={sidebarBox}>
             <h4 style={sidebarTitle}>Đánh giá</h4>
             {[
@@ -163,9 +156,7 @@ export default function CategoryPage() {
           </div>
         </div>
 
-        {/* Nội dung chính */}
         <div style={{ flex: 1 }}>
-          {/* Sắp xếp */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
             {[
               { label: 'Mới nhất', value: 'newest' },
@@ -188,7 +179,6 @@ export default function CategoryPage() {
             ))}
           </div>
 
-          {/* Danh sách sản phẩm */}
           {loading ? (
             <p style={{ textAlign: 'center', color: '#888', padding: 40 }}>Đang tải...</p>
           ) : products.length === 0 ? (
@@ -203,7 +193,6 @@ export default function CategoryPage() {
             </div>
           )}
 
-          {/* Phân trang */}
           {totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 24 }}>
               <button

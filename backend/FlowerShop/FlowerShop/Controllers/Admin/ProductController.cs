@@ -26,12 +26,16 @@ namespace FlowerShop.Controllers.Admin
             var paging = PagingHelper.Normalize(f.Page, f.Limit);
             var q = _context.Products.AsNoTracking().Include(p => p.Category).Include(p => p.Images).AsQueryable();
 
+            if (f.IncludeInactive != true && !f.IsActive.HasValue)
+                q = q.Where(p => p.IsActive == true);
+
             q = ApplyFilters(q, f);
             q = ApplySort(q, f.SortBy);
 
             var total = await q.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)total / paging.Limit);
             var items = await q.Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit).ToListAsync();
-            return Ok(new { total, items });
+            return Ok(new { total, totalItems = total, totalPages, items });
         }
 
         [HttpGet("{id}")]
@@ -88,9 +92,9 @@ namespace FlowerShop.Controllers.Admin
             var images = await _context.ProductImages.Where(i => i.ProductId == id).ToListAsync();
             foreach (var img in images)
             {
-                DeleteFile(img.ImageUrl);
+                UploadHelper.DeleteFile(_env.WebRootPath, img.ImageUrl);
             }
-            DeleteFile(p.ImageUrl);
+            UploadHelper.DeleteFile(_env.WebRootPath, p.ImageUrl);
 
             _context.ProductImages.RemoveRange(images);
             _context.Products.Remove(p);
@@ -114,16 +118,17 @@ namespace FlowerShop.Controllers.Admin
             var p = await _context.Products.FindAsync(id);
             if (p == null) return NotFound();
             if (files == null || files.Count == 0) return BadRequest("Không có file");
+            if (files.Any(file => !UploadHelper.IsImage(file)))
+                return BadRequest(new { message = "File ảnh không hợp lệ" });
 
             var folder = Path.Combine(_env.WebRootPath, "uploads/products");
-            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
             var existingImages = await _context.ProductImages.Where(x => x.ProductId == id).ToListAsync();
             foreach (var existing in existingImages) existing.IsMain = false;
 
             for (int i = 0; i < files.Count; i++)
             {
-                var imageUrl = await SaveImage(files[i], folder);
+                var imageUrl = await UploadHelper.SaveImage(files[i], folder, "/uploads/products");
 
                 var img = new ProductImage
                 {
@@ -147,7 +152,7 @@ namespace FlowerShop.Controllers.Admin
             var img = await _context.ProductImages.FindAsync(imageId);
             if (img == null || img.ProductId != id) return NotFound();
 
-            DeleteFile(img.ImageUrl);
+            UploadHelper.DeleteFile(_env.WebRootPath, img.ImageUrl);
 
             _context.ProductImages.Remove(img);
             await _context.SaveChangesAsync();
@@ -169,13 +174,6 @@ namespace FlowerShop.Controllers.Admin
 
             await _context.SaveChangesAsync();
             return Ok(images);
-        }
-
-        private void DeleteFile(string? url)
-        {
-            if (string.IsNullOrEmpty(url) || url.StartsWith("http")) return;
-            var path = Path.Combine(_env.WebRootPath, url.TrimStart('/'));
-            if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
         }
 
         private static IQueryable<Product> ApplyFilters(IQueryable<Product> q, ProductParams f)
@@ -221,17 +219,6 @@ namespace FlowerShop.Controllers.Admin
             product.UpdatedDate = DateTime.Now;
         }
 
-        private static async Task<string> SaveImage(IFormFile file, string folder)
-        {
-            var fileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
-            var path = Path.Combine(folder, fileName);
-
-            using var stream = new FileStream(path, FileMode.Create);
-            await file.CopyToAsync(stream);
-
-            return "/uploads/products/" + fileName;
-        }
-
         private static string? ValidateProduct(Product product)
         {
             if (string.IsNullOrWhiteSpace(product.ProductName))
@@ -257,6 +244,7 @@ namespace FlowerShop.Controllers.Admin
         public int? CategoryId { get; set; }
         public bool? IsActive { get; set; }
         public bool? IsFeatured { get; set; }
+        public bool? IncludeInactive { get; set; }
         public decimal? MinPrice { get; set; }
         public decimal? MaxPrice { get; set; }
         public string? SortBy { get; set; }

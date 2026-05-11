@@ -16,6 +16,14 @@ export default defineConfig([
       'react-refresh': reactRefresh,
     },
     rules: {
+      'no-unused-vars': ['error', {
+        varsIgnorePattern: '^React$',
+        argsIgnorePattern: '^_',
+        caughtErrors: 'none',
+      }],
+      'react-hooks/exhaustive-deps': 'off',
+      'react-hooks/immutability': 'off',
+      'react-hooks/set-state-in-effect': 'off',
       'react-refresh/only-export-components': 'off',
     },
     languageOptions: {

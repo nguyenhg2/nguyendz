@@ -15,6 +15,7 @@ export function LoginModal() {
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
       }
+      localStorage.setItem('user', JSON.stringify(response.data.user));
       setUser(response.data.user);
       setShowLogin(false);
       showToast('Chào mừng bạn quay lại!');
@@ -71,6 +72,7 @@ export function RegisterModal() {
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
       }
+      localStorage.setItem('user', JSON.stringify(response.data.user));
       setShowRegister(false);
       showToast('Đăng ký thành công! Chào mừng bạn đến với Mộng Lan');
     } catch (error) {

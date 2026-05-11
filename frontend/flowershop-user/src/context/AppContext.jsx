@@ -2,7 +2,6 @@ import { createContext, useState, useEffect } from 'react';
 
 export const AppContext = createContext();
 
-// Parse route từ URL
 const parseRoute = () => {
   const path = window.location.pathname.replace(/^\//, '');
   const search = new URLSearchParams(window.location.search);
@@ -18,7 +17,6 @@ const parseRoute = () => {
   return { page, params };
 };
 
-// Build URL từ page + params
 const buildUrl = (page, params = {}) => {
   let url = '/' + page;
   if (params.id) url += '/' + params.id;
@@ -42,25 +40,25 @@ export function AppProvider({ children }) {
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
 
-  // Khởi tạo: đọc route + localStorage
   useEffect(() => {
     const { page, params } = parseRoute();
     setCurrentPage(page);
     setPageParams(params);
 
-    // Đọc cart từ localStorage
     try {
       const saved = localStorage.getItem('cart');
       if (saved) setCart(JSON.parse(saved));
-    } catch {}
+    } catch {
+      localStorage.removeItem('cart');
+    }
 
-    // Đọc user từ localStorage
     try {
       const savedUser = localStorage.getItem('user');
       if (savedUser) setUser(JSON.parse(savedUser));
-    } catch {}
+    } catch {
+      localStorage.removeItem('user');
+    }
 
-    // Lắng nghe nút back/forward
     const handlePop = () => {
       const { page, params } = parseRoute();
       setCurrentPage(page);
@@ -70,12 +68,10 @@ export function AppProvider({ children }) {
     return () => window.removeEventListener('popstate', handlePop);
   }, []);
 
-  // Lưu cart vào localStorage khi thay đổi
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cart));
   }, [cart]);
 
-  // Điều hướng
   const navigate = (page, params = {}) => {
     const url = buildUrl(page, params);
     window.history.pushState({}, '', url);
@@ -84,13 +80,11 @@ export function AppProvider({ children }) {
     window.scrollTo(0, 0);
   };
 
-  // Toast
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Thêm vào giỏ hàng
   const addToCart = (product, qty = 1) => {
     const id = product.productId || product.id;
     const stock = (product.stockQuantity === null || product.stockQuantity === undefined) ? 999 : product.stockQuantity;
@@ -123,7 +117,6 @@ export function AppProvider({ children }) {
     showToast('Đã thêm vào giỏ hàng');
   };
 
-  // Cập nhật số lượng trong giỏ
   const updateCart = (id, qty) => {
     if (qty <= 0) {
       setCart(c => c.filter(i => i.id !== id));
@@ -138,10 +131,8 @@ export function AppProvider({ children }) {
     }
   };
 
-  // Xóa giỏ hàng
   const clearCart = () => setCart([]);
 
-  // Tính tổng
   const cartTotal = cart.reduce((sum, i) => {
     const itemPrice = i.sale || i.price;
     return sum + itemPrice * i.qty;
@@ -164,7 +155,6 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={value}>
       {children}
 
-      {/* Toast notification */}
       {toast && (
         <div style={{
           position: 'fixed', bottom: 24, right: 24, zIndex: 99999,

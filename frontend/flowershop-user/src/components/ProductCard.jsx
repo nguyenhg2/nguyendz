@@ -36,7 +36,6 @@ export default function ProductCard({ product, horizontal }) {
     addToCart(p);
   };
 
-  // Layout ngang
   if (horizontal) {
     return (
       <div onClick={handleClick} style={styles.hCard}>
@@ -56,10 +55,8 @@ export default function ProductCard({ product, horizontal }) {
     );
   }
 
-  // Layout dọc (mặc định)
   return (
     <div onClick={handleClick} style={{ ...styles.card, opacity: outOfStock ? 0.6 : 1 }}>
-      {/* Ảnh */}
       <div style={styles.imgWrap}>
         <img src={imageUrl} alt={name} style={styles.img} />
         <div style={styles.badges}>
@@ -70,7 +67,6 @@ export default function ProductCard({ product, horizontal }) {
         </div>
       </div>
 
-      {/* Thông tin */}
       <div style={styles.info}>
         <p style={styles.name}>{name}</p>
 

@@ -35,10 +35,11 @@ namespace FlowerShop.Controllers.Admin
                     || (c.Subject ?? "").Contains(search));
 
             var total = await q.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)total / limit);
             var items = await q.OrderByDescending(c => c.CreatedDate)
                 .Skip((page - 1) * limit).Take(limit).ToListAsync();
 
-            return Ok(new { total, items });
+            return Ok(new { total, totalItems = total, totalPages, items });
         }
 
         [HttpGet("{id}")]

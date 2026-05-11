@@ -37,8 +37,10 @@ export default function HomePage() {
         setCategories(catRes.data.items || catRes.data || []);
         setProducts(prodRes.data.items || prodRes.data || []);
         setBanners(bannerRes.data.items || bannerRes.data || []);
-      } catch (error) {
-        console.error(error);
+      } catch {
+        setCategories([]);
+        setProducts([]);
+        setBanners([]);
       } finally {
         setLoading(false);
       }

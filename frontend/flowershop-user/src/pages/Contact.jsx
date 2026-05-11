@@ -1,6 +1,6 @@
 import { useContext, useState } from 'react';
 import { AppContext } from '../context/AppContext';
-import { sendContact } from '../services/api'; 
+import { sendContact } from '../services/api';
 
 export function ContactPage() {
   const { showToast } = useContext(AppContext);
@@ -21,8 +21,7 @@ export function ContactPage() {
       await sendContact(form);
       setSent(true);
       showToast('Tin nhắn của bạn đã được gửi đi!');
-    } catch (error) {
-      console.error("Lỗi gửi liên hệ:", error);
+    } catch {
       showToast('Gửi tin nhắn thất bại. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
@@ -62,14 +61,6 @@ export function ContactPage() {
                 loading="lazy"
               />
             </div>
-            <a
-              href="https://www.openstreetmap.org/?mlat=21.046856&mlon=105.785453#map=18/21.046856/105.7943"
-              target="_blank"
-              rel="noreferrer"
-              style={{ display: 'inline-block', marginTop: 10, fontSize: 13, color: 'var(--green)', fontWeight: 700 }}
-            >
-              Xem bản đồ lớn
-            </a>
           </div>
         </div>
         <div style={{ background: '#fff', borderRadius: 20, border: '1px solid var(--border)', padding: 32 }}>
@@ -78,7 +69,6 @@ export function ContactPage() {
           
           {sent ? (
             <div className="alert alert-success" style={{ textAlign: 'center', padding: 30 }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Gửi thành công!</div>
               <div style={{ marginTop: 8, fontSize: 14 }}>Chúng tôi sẽ liên hệ với bạn sớm nhất có thể.</div>
               <button 
@@ -126,7 +116,7 @@ export function ContactPage() {
                 onClick={handleSubmit}
                 disabled={loading}
               >
-                {loading ? '⏳ Đang gửi...' : '📤 Gửi tin nhắn'}
+                {loading ? 'Đang gửi...' : 'Gửi tin nhắn'}
               </button>
             </>
           )}

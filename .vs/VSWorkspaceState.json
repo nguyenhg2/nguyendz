@@ -7,9 +7,10 @@
     "\\backend\\FlowerShop\\FlowerShop\\Controllers",
     "\\backend\\FlowerShop\\FlowerShop\\Controllers\\Admin",
     "\\backend\\FlowerShop\\FlowerShop\\Controllers\\User",
+    "\\backend\\FlowerShop\\FlowerShop\\Views",
     "\\frontend",
     "\\frontend\\flowershop-admin"
   ],
-  "SelectedNode": "\\frontend\\flowershop-user",
+  "SelectedNode": "\\backend\\FlowerShop\\FlowerShop\\appsettings.json",
   "PreviewInSolutionExplorer": false
 }

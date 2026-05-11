@@ -27,6 +27,7 @@ export default function Header() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
     showToast('Đã đăng xuất! Hẹn gặp lại bạn');
     navigate('home');

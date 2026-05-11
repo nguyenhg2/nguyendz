@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { dashboardAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const fmt = n => new Intl.NumberFormat('vi-VN').format(n || 0);
 const fmtVND = n => fmt(n) + 'đ';
@@ -12,6 +12,10 @@ const STATUS_BADGE = {
   'Đang giao':  'badge-shipping',
   'Hoàn thành': 'badge-done',
   'Đã hủy':     'badge-cancelled',
+};
+
+const paymentLabel = (method) => {
+  return String(method || '').toLowerCase() === 'cod' ? 'COD' : 'Thanh toán';
 };
 
 export default function DashboardPage() {
@@ -46,19 +50,17 @@ export default function DashboardPage() {
   if (loading) return <div className="spinner"/>;
 
   const STAT_CARDS = [
-    { label:'Doanh thu hôm nay',  value: fmtVND(stats?.todayRevenue),   icon:'💰', bg:'linear-gradient(135deg,#c84b6b,#8b2d47)',  sub:`Tháng này: ${fmtVND(stats?.monthRevenue)}` },
-    { label:'Đơn hàng hôm nay',   value: fmt(stats?.todayOrders),        icon:'📦', bg:'linear-gradient(135deg,#3b82f6,#1e40af)',  sub:`Tổng: ${fmt(stats?.totalOrders)} đơn` },
-    { label:'Tổng sản phẩm',      value: fmt(stats?.totalProducts),      icon:'🌸', bg:'linear-gradient(135deg,#22c55e,#15803d)',  sub:'Sản phẩm đang bán' },
-    { label:'Khách hàng',         value: fmt(stats?.totalCustomers),      icon:'👥', bg:'linear-gradient(135deg,#f97316,#c2410c)',  sub:'Đã đăng ký' },
+    { label:'Doanh thu hôm nay',  value: fmtVND(stats?.todayRevenue),   bg:'linear-gradient(135deg,#c84b6b,#8b2d47)',  sub:`Tháng này: ${fmtVND(stats?.monthRevenue)}` },
+    { label:'Đơn hàng hôm nay',   value: fmt(stats?.todayOrders),        bg:'linear-gradient(135deg,#3b82f6,#1e40af)',  sub:`Tổng: ${fmt(stats?.totalOrders)} đơn` },
+    { label:'Tổng sản phẩm',      value: fmt(stats?.totalProducts),      bg:'linear-gradient(135deg,#22c55e,#15803d)',  sub:'Sản phẩm đang bán' },
+    { label:'Khách hàng',         value: fmt(stats?.totalCustomers),      bg:'linear-gradient(135deg,#f97316,#c2410c)',  sub:'Đã đăng ký' },
   ];
 
   return (
     <div>
-      {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16, marginBottom: 24 }}>
         {STAT_CARDS.map(s => (
           <div key={s.label} className="stat-card" style={{ background: s.bg }}>
-            <div className="stat-icon">{s.icon}</div>
             <div className="stat-label">{s.label}</div>
             <div className="stat-value">{s.value}</div>
             <div className="stat-sub">{s.sub}</div>
@@ -66,11 +68,9 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Charts row */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 24 }}>
-        {/* Revenue chart */}
         <div className="card">
-          <div className="card-header"><span className="card-title">📈 Doanh thu theo tháng</span></div>
+          <div className="card-header"><span className="card-title">Doanh thu theo tháng</span></div>
           <div className="card-body">
             {chart.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
@@ -86,9 +86,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Top products */}
         <div className="card">
-          <div className="card-header"><span className="card-title">🔥 Sản phẩm bán chạy</span></div>
+          <div className="card-header"><span className="card-title">Sản phẩm bán chạy</span></div>
           <div className="card-body" style={{ padding: '12px 16px' }}>
             {topProd.slice(0, 7).map((p, i) => (
               <div key={p.productId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < 6 ? '1px solid #f3f4f6' : 'none' }}>
@@ -106,10 +105,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent orders */}
       <div className="card">
         <div className="card-header">
-          <span className="card-title">🕐 Đơn hàng gần nhất</span>
+          <span className="card-title">Đơn hàng gần nhất</span>
         </div>
         <div className="tbl-wrapper">
           <table>
@@ -135,7 +133,7 @@ export default function DashboardPage() {
                   <td><span style={{ fontWeight: 600 }}>{o.receiverName}</span></td>
                   <td style={{ color: 'var(--muted)' }}>{o.receiverPhone}</td>
                   <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12 }}>{o.receiverAddress}</td>
-                  <td><span style={{ fontSize: 12 }}>{o.paymentMethod === 'COD' ? '💵 COD' : '🏦 CK'}</span></td>
+                  <td><span style={{ fontSize: 12 }}>{paymentLabel(o.paymentMethod)}</span></td>
                   <td><span style={{ fontWeight: 700, color: 'var(--primary)' }}>{fmtVND(o.totalAmount)}</span></td>
                   <td><span className={`badge ${STATUS_BADGE[o.status] || 'badge-pending'}`}>{o.status}</span></td>
                   <td style={{ color: 'var(--muted)', fontSize: 12 }}>{new Date(o.orderDate).toLocaleDateString('vi-VN')}</td>

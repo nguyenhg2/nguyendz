@@ -38,6 +38,7 @@ namespace FlowerShop.Controllers.Admin
                     || (r.User != null && r.User.FullName.Contains(f.Search)));
 
             var total = await q.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)total / paging.Limit);
             var items = await q.OrderByDescending(r => r.CreatedDate)
                 .Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit)
                 .Select(r => new {
@@ -46,7 +47,7 @@ namespace FlowerShop.Controllers.Admin
                     userName = r.User != null ? r.User.FullName : ""
                 }).ToListAsync();
 
-            return Ok(new { total, items });
+            return Ok(new { total, totalItems = total, totalPages, items });
         }
 
         [HttpDelete("{id}")]

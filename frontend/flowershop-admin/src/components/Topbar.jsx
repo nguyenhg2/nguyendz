@@ -25,7 +25,7 @@ export default function Topbar() {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ background: '#f3f4f6', borderRadius: 8, padding: '6px 12px', fontSize: 12, color: 'var(--muted)' }}>
-          🌸 Shop hoa Mộng Lan
+          Shop hoa Mộng Lan
         </div>
         <div className="avatar">{admin?.FullName?.[0] || 'A'}</div>
       </div>

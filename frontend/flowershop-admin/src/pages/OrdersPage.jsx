@@ -62,6 +62,7 @@ export default function OrdersPage() {
   const orderTotal = (order) => order?.totalAmount || order?.totalPrice || order?.total || 0;
   const itemPrice = (item) => item.price || item.unitPrice || 0;
   const itemTotal = (item) => item.subtotal || itemPrice(item) * (item.quantity || 0);
+  const isCompletedOrder = (order) => ['Completed', 'Hoàn thành'].includes(order?.status);
 
   const statusLabel = (s) => {
     const map = {
@@ -148,6 +149,11 @@ export default function OrdersPage() {
 
   const exportPdf = () => {
     if (!detail) return;
+    if (!isCompletedOrder(detail)) {
+      addToast('Chỉ xuất được hóa đơn khi đơn hàng đã hoàn thành', 'error');
+      return;
+    }
+
     const rows = orderItems(detail).map(item => `
       <tr>
         <td>${item.productName || item.name || ''}</td>
@@ -320,7 +326,7 @@ export default function OrdersPage() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
               <button onClick={() => setDetail(null)} style={btnDanger}>Hủy</button>
-              <button onClick={exportPdf} style={btnPrimary}>Xuất PDF</button>
+              {isCompletedOrder(detail) && <button onClick={exportPdf} style={btnPrimary}>Xuất hóa đơn</button>}
             </div>
           </div>
         </div>

@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
 using Microsoft.AspNetCore.Authorization;
 
+using FlowerShop.Common;
+
 namespace FlowerShop.Controllers.Admin
 {
     [Route("api/admin/dashboard")]
@@ -29,15 +31,15 @@ namespace FlowerShop.Controllers.Admin
             var totalCustomers = await _context.Users.CountAsync(u => u.Role == "Customer");
 
             var totalRevenue = await _context.Orders
-                .Where(o => o.Status == "Hoàn thành")
+                .Where(o => OrderStatus.CompletedValues.Contains(o.Status))
                 .SumAsync(o => o.TotalAmount ?? 0);
 
             var todayRevenue = await _context.Orders
-                .Where(o => o.Status == "Hoàn thành" && o.OrderDate >= today)
+                .Where(o => OrderStatus.CompletedValues.Contains(o.Status) && o.OrderDate >= today)
                 .SumAsync(o => o.TotalAmount ?? 0);
 
             var monthRevenue = await _context.Orders
-                .Where(o => o.Status == "Hoàn thành" && o.OrderDate >= startOfMonth)
+                .Where(o => OrderStatus.CompletedValues.Contains(o.Status) && o.OrderDate >= startOfMonth)
                 .SumAsync(o => o.TotalAmount ?? 0);
 
             return Ok(new
@@ -64,8 +66,12 @@ namespace FlowerShop.Controllers.Admin
                     o.OrderId,
                     o.OrderDate,
                     o.TotalAmount,
-                    o.Status,
-                    CustomerName = o.ReceiverName ?? (o.User != null ? o.User.FullName : "")
+                    Status = OrderStatus.Normalize(o.Status),
+                    CustomerName = o.User != null ? o.User.FullName : "",
+                    o.ReceiverName,
+                    o.ReceiverPhone,
+                    o.ReceiverAddress,
+                    o.PaymentMethod
                 })
                 .ToListAsync();
 
@@ -85,7 +91,7 @@ namespace FlowerShop.Controllers.Admin
             foreach (var m in last6Months)
             {
                 var revenue = await _context.Orders
-                    .Where(o => o.Status == "Hoàn thành" &&
+                    .Where(o => OrderStatus.CompletedValues.Contains(o.Status) &&
                                 o.OrderDate.HasValue &&
                                 o.OrderDate.Value.Year == m.Year &&
                                 o.OrderDate.Value.Month == m.Month)

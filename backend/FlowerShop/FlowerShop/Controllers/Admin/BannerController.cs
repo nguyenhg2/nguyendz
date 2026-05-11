@@ -22,21 +22,24 @@ namespace FlowerShop.Controllers.Admin
 
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] bool? isActive,
-            [FromQuery] int page = 1, [FromQuery] int limit = 20)
+            [FromQuery] bool includeInactive = false, [FromQuery] int page = 1, [FromQuery] int limit = 20)
         {
             (page, limit) = PagingHelper.Normalize(page, limit, defaultLimit: 20);
 
             var q = _context.Banners.AsNoTracking().AsQueryable();
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(b => (b.Title ?? "").Contains(search));
+                q = q.Where(b =>( b.Title ?? "").Contains(search));
+            if (!includeInactive && !isActive.HasValue)
+                q = q.Where(b => b.IsActive == true);
             if (isActive.HasValue)
                 q = q.Where(b => b.IsActive == isActive);
 
             var total = await q.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)total / limit);
             var items = await q.OrderBy(b => b.SortOrder)
                 .Skip((page - 1) * limit).Take(limit).ToListAsync();
 
-            return Ok(new { total, items });
+            return Ok(new { total, totalItems = total, totalPages, items });
         }
 
         [HttpGet("{id}")]
@@ -100,18 +103,13 @@ namespace FlowerShop.Controllers.Admin
         [HttpPost("{id}/image")]
         public async Task<IActionResult> UploadImage(int id, IFormFile file)
         {
-            if (file == null) return BadRequest();
+            if (!UploadHelper.IsImage(file)) return BadRequest(new { message = "File ảnh không hợp lệ" });
             var b = await _context.Banners.FindAsync(id);
             if (b == null) return NotFound();
 
             var folder = Path.Combine(_env.WebRootPath, "uploads/banners");
-            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
-
-            var fileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
-            using var stream = new FileStream(Path.Combine(folder, fileName), FileMode.Create);
-            await file.CopyToAsync(stream);
-
-            b.ImageUrl = "/uploads/banners/" + fileName;
+            UploadHelper.DeleteFile(_env.WebRootPath, b.ImageUrl);
+            b.ImageUrl = await UploadHelper.SaveImage(file, folder, "/uploads/banners");
             await _context.SaveChangesAsync();
             return Ok(new { imageUrl = b.ImageUrl });
         }
