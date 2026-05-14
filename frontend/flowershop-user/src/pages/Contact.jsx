@@ -55,10 +55,11 @@ export function ContactPage() {
             <div style={{ fontWeight: 700, marginBottom: 8 }}>🗺️ Bản đồ</div>
             <div style={{ borderRadius: 12, height: 220, overflow: 'hidden', border: '1px solid var(--border)', background: '#d4e8da' }}>
               <iframe
-                title="Bản đồ Hoa Mộng Lan"
-                src="https://www.openstreetmap.org/export/embed.html?bbox=105.7879%2C21.0420%2C105.8006%2C21.0516&layer=mapnik&marker=21.0468%2C105.7943"
-                style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
+                title="Ban do shop hoa tai 236 Hoang Quoc Viet"
+                src="https://www.openstreetmap.org/export/embed.html?bbox=105.7799%2C21.0439%2C105.7927%2C21.0507&layer=mapnik&marker=21.0473%2C105.7863"
+                style={{ width: '100%', height: '100%', border: 0 }}
                 loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
               />
             </div>
           </div>

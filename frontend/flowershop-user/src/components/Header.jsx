@@ -1,24 +1,13 @@
-import { useContext, useState, useEffect } from 'react';
+import { useContext, useState } from 'react';
 import { AppContext } from '../context/AppContext';
-import { getCategories } from '../services/api';
 
 export default function Header() {
   const { navigate, cartCount, user, setShowLogin, setUser, showToast } = useContext(AppContext);
   const [search, setSearch] = useState('');
-  const [categories, setCategories] = useState([]);
-
-  useEffect(() => {
-    const fetchCats = async () => {
-      try {
-        const response = await getCategories();
-        const data = response.data.items || response.data || [];
-        setCategories(data);
-      } catch (error) {
-        setCategories([]);
-      }
-    };
-    fetchCats();
-  }, []);
+  const navItems = [
+    { label: 'Trang chủ', page: 'home' },
+    { label: 'Liên hệ', page: 'contact' },
+  ];
 
   const doSearch = (e) => {
     e.preventDefault();
@@ -43,16 +32,12 @@ export default function Header() {
             Mộng Lan
           </div>
           <nav style={{ display: 'flex', gap: 4, flex: 1 }}>
-            {categories.slice(0, 4).map(c => {
-              const cId = c.categoryId || c.id;
-              const cName = c.categoryName || c.name;
-              return (
-                <button key={cId} className="btn btn-ghost" style={{ fontSize: 13 }}
-                  onClick={() => navigate('category', { id: cId })}>
-                  {cName}
-                </button>
-              );
-            })}
+            {navItems.map(item => (
+              <button key={item.page} className="btn btn-ghost" style={{ fontSize: 13 }}
+                onClick={() => navigate(item.page)}>
+                {item.label}
+              </button>
+            ))}
           </nav>
           <form onSubmit={doSearch} style={{ display: 'flex', gap: 0, maxWidth: 240 }}>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm hoa..."

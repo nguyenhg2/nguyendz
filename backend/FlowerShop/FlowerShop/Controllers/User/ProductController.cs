@@ -159,7 +159,6 @@ namespace FlowerShop.Controllers.User
                 ImageUrl = GetMainImage(product),
                 Images = GetImages(product),
                 Cat = product.CategoryId,
-                CategoryId = product.CategoryId,
                 CategoryName = product.Category?.CategoryName,
                 Rating = product.Rating ?? 0,
                 SoldQuantity = product.SoldQuantity,
@@ -235,7 +234,6 @@ namespace FlowerShop.Controllers.User
         public string? ImageUrl { get; set; }
         public List<ProductImageDto> Images { get; set; } = new();
         public int? Cat { get; set; }
-        public int? CategoryId { get; set; }
         public string? CategoryName { get; set; }
         public decimal Rating { get; set; }
         public int? SoldQuantity { get; set; }

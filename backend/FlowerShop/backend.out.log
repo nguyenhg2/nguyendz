@@ -1,0 +1,92 @@
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {2d6a263e-d219-4d4e-a649-24be9456e71e} may be persisted to storage in unencrypted form.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5120
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\admin\OneDrive\Documents\tranvanan\nguyendz\backend\FlowerShop\FlowerShop
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (29ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Products] AS [p]
+      WHERE [p].[IsActive] = CAST(1 AS bit)
+warn: Microsoft.EntityFrameworkCore.Query[20504]
+      Compiling a query which loads related collections for more than one collection navigation, either via 'Include' or through projection, but no 'QuerySplittingBehavior' has been configured. By default, Entity Framework will use 'QuerySplittingBehavior.SingleQuery', which can potentially result in slow query performance. See https://go.microsoft.com/fwlink/?linkid=2134277 for more information. To identify the query that's triggering this warning call 'ConfigureWarnings(w => w.Throw(RelationalEventId.MultipleCollectionIncludeWarning))'.
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (33ms) [Parameters=[@p='?' (DbType = Int32), @p0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT [p2].[ProductId], [p2].[ProductName], [p2].[Price], [p2].[DiscountPrice], [p2].[c], [p2].[CategoryId], [p2].[c0], [p2].[c1], [p2].[SoldQuantity], [p2].[StockQuantity], [p2].[IsFeatured], [p2].[CreatedDate], [p2].[Description], [p2].[ImageUrl], [p2].[IsActive], [p2].[Rating], [p2].[UpdatedDate], [p1].[Id], [p1].[ImageUrl], [p1].[IsMain], [p1].[ProductId], [r2].[ReviewId], [r2].[Comment], [r2].[CreatedDate], [r2].[ProductId], [r2].[Rating], [r2].[UserId]
+      FROM (
+          SELECT [p].[ProductId], [p].[ProductName], [p].[Price], [p].[DiscountPrice], COALESCE((
+              SELECT TOP(1) [p0].[ImageUrl]
+              FROM [ProductImages] AS [p0]
+              WHERE [p].[ProductId] = [p0].[ProductId]
+              ORDER BY [p0].[IsMain] DESC, [p0].[Id]), [p].[ImageUrl]) AS [c], [p].[CategoryId], CASE
+              WHEN EXISTS (
+                  SELECT 1
+                  FROM [Reviews] AS [r]
+                  WHERE [p].[ProductId] = [r].[ProductId] AND [r].[Rating] IS NOT NULL) THEN ROUND((
+                  SELECT AVG(CAST([r0].[Rating] AS float))
+                  FROM [Reviews] AS [r0]
+                  WHERE [p].[ProductId] = [r0].[ProductId] AND [r0].[Rating] IS NOT NULL), 1)
+              ELSE 0.0E0
+          END AS [c0], (
+              SELECT COUNT(*)
+              FROM [Reviews] AS [r1]
+              WHERE [p].[ProductId] = [r1].[ProductId]) AS [c1], [p].[SoldQuantity], [p].[StockQuantity], [p].[IsFeatured], [p].[CreatedDate], [p].[Description], [p].[ImageUrl], [p].[IsActive], [p].[Rating], [p].[UpdatedDate]
+          FROM [Products] AS [p]
+          WHERE [p].[IsActive] = CAST(1 AS bit)
+          ORDER BY [p].[CreatedDate] DESC
+          OFFSET @p ROWS FETCH NEXT @p0 ROWS ONLY
+      ) AS [p2]
+      LEFT JOIN [ProductImages] AS [p1] ON [p2].[ProductId] = [p1].[ProductId]
+      LEFT JOIN [Reviews] AS [r2] ON [p2].[ProductId] = [r2].[ProductId]
+      ORDER BY [p2].[CreatedDate] DESC, [p2].[ProductId], [p1].[Id]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT [c].[CategoryId] AS [id], [c].[CategoryName] AS [name], [c].[ImageUrl] AS [imageUrl], [c].[Emoji] AS [emoji], [c].[Color] AS [color]
+      FROM [Categories] AS [c]
+      WHERE [c].[IsActive] = CAST(1 AS bit)
+      ORDER BY [c].[SortOrder]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT [b].[BannerId] AS [id], [b].[Title] AS [title], [b].[Subtitle] AS [sub], [b].[CtaText] AS [cta], [b].[BgColor] AS [bg], [b].[ImageUrl] AS [imageUrl], [b].[LinkUrl] AS [linkUrl]
+      FROM [Banners] AS [b]
+      WHERE [b].[IsActive] = CAST(1 AS bit)
+      ORDER BY [b].[SortOrder]
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (6ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM [Products] AS [p]
+      WHERE [p].[IsActive] = CAST(1 AS bit)
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p='?' (DbType = Int32), @p0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+      SELECT [p2].[ProductId], [p2].[ProductName], [p2].[Price], [p2].[DiscountPrice], [p2].[c], [p2].[CategoryId], [p2].[c0], [p2].[c1], [p2].[SoldQuantity], [p2].[StockQuantity], [p2].[IsFeatured], [p2].[CreatedDate], [p2].[Description], [p2].[ImageUrl], [p2].[IsActive], [p2].[Rating], [p2].[UpdatedDate], [p1].[Id], [p1].[ImageUrl], [p1].[IsMain], [p1].[ProductId], [r2].[ReviewId], [r2].[Comment], [r2].[CreatedDate], [r2].[ProductId], [r2].[Rating], [r2].[UserId]
+      FROM (
+          SELECT [p].[ProductId], [p].[ProductName], [p].[Price], [p].[DiscountPrice], COALESCE((
+              SELECT TOP(1) [p0].[ImageUrl]
+              FROM [ProductImages] AS [p0]
+              WHERE [p].[ProductId] = [p0].[ProductId]
+              ORDER BY [p0].[IsMain] DESC, [p0].[Id]), [p].[ImageUrl]) AS [c], [p].[CategoryId], CASE
+              WHEN EXISTS (
+                  SELECT 1
+                  FROM [Reviews] AS [r]
+                  WHERE [p].[ProductId] = [r].[ProductId] AND [r].[Rating] IS NOT NULL) THEN ROUND((
+                  SELECT AVG(CAST([r0].[Rating] AS float))
+                  FROM [Reviews] AS [r0]
+                  WHERE [p].[ProductId] = [r0].[ProductId] AND [r0].[Rating] IS NOT NULL), 1)
+              ELSE 0.0E0
+          END AS [c0], (
+              SELECT COUNT(*)
+              FROM [Reviews] AS [r1]
+              WHERE [p].[ProductId] = [r1].[ProductId]) AS [c1], [p].[SoldQuantity], [p].[StockQuantity], [p].[IsFeatured], [p].[CreatedDate], [p].[Description], [p].[ImageUrl], [p].[IsActive], [p].[Rating], [p].[UpdatedDate]
+          FROM [Products] AS [p]
+          WHERE [p].[IsActive] = CAST(1 AS bit)
+          ORDER BY [p].[CreatedDate] DESC
+          OFFSET @p ROWS FETCH NEXT @p0 ROWS ONLY
+      ) AS [p2]
+      LEFT JOIN [ProductImages] AS [p1] ON [p2].[ProductId] = [p1].[ProductId]
+      LEFT JOIN [Reviews] AS [r2] ON [p2].[ProductId] = [r2].[ProductId]
+      ORDER BY [p2].[CreatedDate] DESC, [p2].[ProductId], [p1].[Id]

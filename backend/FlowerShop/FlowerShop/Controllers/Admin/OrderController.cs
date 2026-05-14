@@ -36,7 +36,7 @@ namespace FlowerShop.Controllers.Admin
                     TotalAmount = order.TotalAmount,
                     TotalPrice = order.TotalAmount,
                     Total = order.TotalAmount,
-                    Status = OrderStatus.Normalize(order.Status),
+                    Status = order.Status,
                     CustomerName = order.User != null ? order.User.FullName : null,
                     UserName = order.User != null ? order.User.FullName : null,
                     ReceiverName = order.ReceiverName,
@@ -69,7 +69,7 @@ namespace FlowerShop.Controllers.Admin
                 TotalAmount = order.TotalAmount,
                 TotalPrice = order.TotalAmount,
                 Total = order.TotalAmount,
-                Status = OrderStatus.Normalize(order.Status),
+                Status = order.Status,
                 CustomerName = order.User?.FullName,
                 UserName = order.User?.FullName,
                 ReceiverName = order.ReceiverName,
@@ -98,11 +98,7 @@ namespace FlowerShop.Controllers.Admin
         {
             var order = await _context.Orders.FindAsync(id);
             if (order == null) return NotFound();
-
-            if (OrderStatus.IsCancelled(order.Status))
-                return BadRequest(new { message = "Đơn hàng đã hủy, không thể đổi trạng thái" });
-
-            order.Status = OrderStatus.Normalize(data.Status);
+            order.Status = data.Status;
             await _context.SaveChangesAsync();
             return Ok(new { success = true, status = order.Status });
         }
@@ -112,12 +108,8 @@ namespace FlowerShop.Controllers.Admin
         {
             var order = await _context.Orders.Include(o => o.OrderDetails).FirstOrDefaultAsync(o => o.OrderId == id);
             if (order == null) return NotFound();
-            if (OrderStatus.IsCancelled(order.Status))
-                return BadRequest(new { message = "Đơn hàng đã được hủy trước đó" });
-            if (OrderStatus.IsCompleted(order.Status))
-                return BadRequest(new { message = "Đơn hàng đã hoàn thành, không thể hủy" });
 
-            order.Status = OrderStatus.Cancelled;
+            order.Status = "Đã hủy";
             order.Note = string.IsNullOrEmpty(order.Note)
                 ? "Lý do hủy: " + data.Reason
                 : order.Note + " | Lý do hủy: " + data.Reason;
@@ -141,10 +133,7 @@ namespace FlowerShop.Controllers.Admin
             var query = _context.Orders.AsNoTracking().Include(order => order.User).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(f.Status))
-            {
-                var status = OrderStatus.Normalize(f.Status);
-                query = query.Where(order => order.Status == status || order.Status == f.Status);
-            }
+                query = query.Where(order => order.Status == f.Status);
 
             if (!string.IsNullOrWhiteSpace(f.Search))
             {

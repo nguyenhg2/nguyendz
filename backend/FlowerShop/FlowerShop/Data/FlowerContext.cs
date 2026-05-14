@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-using FlowerShop.Common;
-
 namespace FlowerShop.Data;
 
 public partial class FlowerContext : DbContext
@@ -62,7 +60,7 @@ public partial class FlowerContext : DbContext
         {
             entity.HasKey(e => e.OrderId);
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
-            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue(OrderStatus.Pending);
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Cho xu ly");
             entity.Property(e => e.ReceiverName).HasMaxLength(100);
             entity.Property(e => e.ReceiverPhone).HasMaxLength(15);
             entity.Property(e => e.ReceiverAddress).HasMaxLength(500);

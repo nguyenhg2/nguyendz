@@ -35,47 +35,19 @@ namespace FlowerShop.Controllers.Admin
                 q = q.Where(u => u.IsActive == f.IsActive);
 
             var total = await q.CountAsync();
-            var totalPages = (int)Math.Ceiling((double)total / paging.Limit);
             var items = await q.OrderByDescending(u => u.CreatedDate)
-                .Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit)
-                .Select(u => new
-                {
-                    u.UserId,
-                    u.FullName,
-                    u.Email,
-                    u.Phone,
-                    u.Address,
-                    u.Avatar,
-                    u.Role,
-                    u.IsActive,
-                    u.CreatedDate
-                })
-                .ToListAsync();
+                .Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit).ToListAsync();
 
-            return Ok(new { total, totalItems = total, totalPages, items });
+            return Ok(new { total, items });
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var u = await _context.Users.AsNoTracking()
-                .Where(x => x.UserId == id)
-                .Select(x => new
-                {
-                    x.UserId,
-                    x.FullName,
-                    x.Email,
-                    x.Phone,
-                    x.Address,
-                    x.Avatar,
-                    x.Role,
-                    x.IsActive,
-                    x.CreatedDate,
-                    ordersCount = x.Orders.Count
-                })
-                .FirstOrDefaultAsync();
-
-            return u == null ? NotFound() : Ok(u);
+            var u = await _context.Users.AsNoTracking().Include(x => x.Orders).FirstOrDefaultAsync(x => x.UserId == id);
+            if (u == null) return NotFound();
+            u.PasswordHash = "";
+            return Ok(u);
         }
 
         [HttpPut("{id}")]

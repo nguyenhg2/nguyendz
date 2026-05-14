@@ -13,12 +13,18 @@ export function SearchPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalItems, setTotalItems] = useState(0);
+  // const [minPrice, setMinPrice] = useState("");
+  // const [maxPrice, setMaxPrice] = useState("");
+
 
   useEffect(() => {
     const fetchResults = async () => {
       setLoading(true);
       try {
         const params = { search: q, sort };
+        // if (minPrice || maxPrice) {
+        //   params.priceRange = `${minPrice || 0}-${maxPrice || ''}`;
+        // }
         if (priceRange) params.priceRange = priceRange;
         if (ratingFilter) params.rating = ratingFilter;
 
@@ -69,6 +75,11 @@ export function SearchPage() {
               <option value="1000000-99999999">Trên 1tr</option>
             </select>
           </div>
+          {/* <label>Giá từ:</label>
+          <input type="number" placeholder="0" value={minPrice} onChange={(e) => setMinPrice(e.target.value)}></input>
+
+          <label> Giá đến:</label>
+          <input type="number" placeholder="0" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)}></input> */}
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>Đánh giá:</span>

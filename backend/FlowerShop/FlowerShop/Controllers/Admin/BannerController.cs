@@ -22,24 +22,21 @@ namespace FlowerShop.Controllers.Admin
 
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] bool? isActive,
-            [FromQuery] bool includeInactive = false, [FromQuery] int page = 1, [FromQuery] int limit = 20)
+            [FromQuery] int page = 1, [FromQuery] int limit = 20)
         {
             (page, limit) = PagingHelper.Normalize(page, limit, defaultLimit: 20);
 
             var q = _context.Banners.AsNoTracking().AsQueryable();
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(b =>( b.Title ?? "").Contains(search));
-            if (!includeInactive && !isActive.HasValue)
-                q = q.Where(b => b.IsActive == true);
+                q = q.Where(b => (b.Title ?? "").Contains(search));
             if (isActive.HasValue)
                 q = q.Where(b => b.IsActive == isActive);
 
             var total = await q.CountAsync();
-            var totalPages = (int)Math.Ceiling((double)total / limit);
             var items = await q.OrderBy(b => b.SortOrder)
                 .Skip((page - 1) * limit).Take(limit).ToListAsync();
 
-            return Ok(new { total, totalItems = total, totalPages, items });
+            return Ok(new { total, items });
         }
 
         [HttpGet("{id}")]
@@ -103,13 +100,18 @@ namespace FlowerShop.Controllers.Admin
         [HttpPost("{id}/image")]
         public async Task<IActionResult> UploadImage(int id, IFormFile file)
         {
-            if (!UploadHelper.IsImage(file)) return BadRequest(new { message = "File ảnh không hợp lệ" });
+            if (file == null) return BadRequest();
             var b = await _context.Banners.FindAsync(id);
             if (b == null) return NotFound();
 
             var folder = Path.Combine(_env.WebRootPath, "uploads/banners");
-            UploadHelper.DeleteFile(_env.WebRootPath, b.ImageUrl);
-            b.ImageUrl = await UploadHelper.SaveImage(file, folder, "/uploads/banners");
+            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+            var fileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
+            using var stream = new FileStream(Path.Combine(folder, fileName), FileMode.Create);
+            await file.CopyToAsync(stream);
+
+            b.ImageUrl = "/uploads/banners/" + fileName;
             await _context.SaveChangesAsync();
             return Ok(new { imageUrl = b.ImageUrl });
         }
