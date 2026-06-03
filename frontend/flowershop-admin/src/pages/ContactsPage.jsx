@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { contactAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
@@ -25,7 +25,7 @@ export default function ContactsPage() {
       if (search) params.search = search;
       if (readFilter !== '') params.isRead = readFilter === 'true';
       const res = await contactAPI.getAll(params);
-      const { items, total } = readPagedResponse(res.data, LIMIT);
+      const { items, total } = readPagedResponse(res.data);
       setList(items);
       setTotal(total);
     } catch { addToast('Lỗi tải liên hệ', 'error'); }

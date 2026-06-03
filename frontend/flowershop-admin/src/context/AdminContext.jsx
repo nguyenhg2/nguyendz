@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { authAPI, adminAuth } from '../services/api';
 import { DEFAULT_ADMIN_PAGE, normalizeAdminPage, pagePath } from '../constants/navigation';
 

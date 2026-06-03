@@ -42,14 +42,6 @@ namespace FlowerShop.Controllers.Admin
             return Ok(PagingHelper.Result(total, items, page, limit));
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
-        {
-            var c = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(x => x.CategoryId == id);
-            if (c == null) return NotFound();
-            return Ok(c);
-        }
-
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Category category)
         {

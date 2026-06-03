@@ -21,7 +21,6 @@ namespace FlowerShop.Common
             return new
             {
                 total,
-                totalItems = total,
                 totalPages = (int)Math.Ceiling((double)total / limit),
                 items
             };

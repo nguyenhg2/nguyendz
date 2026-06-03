@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function ConfirmModal({ title, message, onConfirm, onCancel }) {
   return (
     <div className='modal-backdrop' onClick={onCancel}>

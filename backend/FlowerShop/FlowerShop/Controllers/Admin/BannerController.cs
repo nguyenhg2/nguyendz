@@ -41,14 +41,6 @@ namespace FlowerShop.Controllers.Admin
             return Ok(PagingHelper.Result(total, items, page, limit));
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
-        {
-            var b = await _context.Banners.AsNoTracking().FirstOrDefaultAsync(x => x.BannerId == id);
-            if (b == null) return NotFound();
-            return Ok(b);
-        }
-
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Banner banner)
         {

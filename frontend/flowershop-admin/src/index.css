@@ -151,9 +151,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
 .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
 .empty-state .empty-icon { font-size: 52px; margin-bottom: 12px; }
 .empty-state p { margin-top: 8px; font-size: 14px; }
+.detail-box { background: #f9fafb; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+.detail-box p { margin: 0; line-height: 1.8; }
+.total-line { text-align: right; margin-top: 14px; font-weight: 800; font-size: 16px; color: var(--primary); }
 .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; margin: 40px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .img-preview { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 28px; border: 1px solid var(--border); }
+.img-sm { width: 44px; height: 44px; }
 .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary-l); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; flex-shrink: 0; }
 .star-row { color: #f59e0b; letter-spacing: 1px; }
 .pagination { display: flex; gap: 6px; justify-content: center; margin-top: 20px; }

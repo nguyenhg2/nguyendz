@@ -28,10 +28,6 @@ namespace FlowerShop.Controllers.Admin
             var totalProducts = await _context.Products.CountAsync();
             var totalCustomers = await _context.Users.CountAsync(u => u.Role == "Customer");
 
-            var totalRevenue = await _context.Orders
-                .Where(o => o.Status == AdminOrderStatus.Completed)
-                .SumAsync(o => o.TotalAmount ?? 0);
-
             var todayRevenue = await _context.Orders
                 .Where(o => o.Status == AdminOrderStatus.Completed && o.OrderDate >= today)
                 .SumAsync(o => o.TotalAmount ?? 0);
@@ -47,8 +43,7 @@ namespace FlowerShop.Controllers.Admin
                 monthRevenue,
                 todayRevenue,
                 totalProducts,
-                totalCustomers,
-                totalRevenue
+                totalCustomers
             });
         }
 
@@ -57,7 +52,6 @@ namespace FlowerShop.Controllers.Admin
         {
             var orders = await _context.Orders
                 .AsNoTracking()
-                .Include(o => o.User)
                 .OrderByDescending(o => o.OrderDate)
                 .Take(10)
                 .Select(o => new {
@@ -68,8 +62,7 @@ namespace FlowerShop.Controllers.Admin
                     o.ReceiverName,
                     o.ReceiverPhone,
                     o.ReceiverAddress,
-                    o.PaymentMethod,
-                    CustomerName = o.ReceiverName ?? (o.User != null ? o.User.FullName : "")
+                    o.PaymentMethod
                 })
                 .ToListAsync();
 
@@ -121,9 +114,7 @@ namespace FlowerShop.Controllers.Admin
                 .Select(p => new {
                     p.ProductId,
                     p.ProductName,
-                    p.Price,
-                    p.SoldQuantity,
-                    p.ImageUrl
+                    p.SoldQuantity
                 })
                 .ToListAsync();
 

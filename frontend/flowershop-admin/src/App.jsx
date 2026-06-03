@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAdmin } from './context/AdminContext';
 
 import Sidebar from './components/Sidebar';

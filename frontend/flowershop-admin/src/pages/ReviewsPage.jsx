@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { reviewAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
@@ -26,7 +26,7 @@ export default function ReviewsPage() {
       if (minRating) params.minRating = minRating;
       if (maxRating) params.maxRating = maxRating;
       const res = await reviewAPI.getAll(params);
-      const { items, total } = readPagedResponse(res.data, LIMIT);
+      const { items, total } = readPagedResponse(res.data);
       setList(items);
       setTotal(total);
     } catch { addToast('Lỗi tải đánh giá', 'error'); }
@@ -81,8 +81,8 @@ export default function ReviewsPage() {
                 {list.map(r => (
                   <tr key={r.reviewId}>
                     <td>#{r.reviewId}</td>
-                    <td>{r.productName || r.product?.productName || `SP #${r.productId}`}</td>
-                    <td>{r.userName || r.user?.fullName || `User #${r.userId}`}</td>
+                    <td>{r.productName || `SP #${r.productId}`}</td>
+                    <td>{r.userName || `User #${r.userId}`}</td>
                     <td style={{ color: '#f59e0b' }}>{stars(r.rating)}</td>
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.comment || '-'}</td>
                     <td>{formatDate(r.createdDate)}</td>

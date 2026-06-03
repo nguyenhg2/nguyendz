@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FlowerShop.Data;
 using FlowerShop.Common;
@@ -22,16 +22,29 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetAll([FromQuery] OrderSearchParams f)
         {
             var paging = PagingHelper.Normalize(f.Page, f.Limit);
-            var q = BuildOrderQuery(f);
+            var query = BuildOrderQuery(f);
 
-            var total = await q.CountAsync();
-            var orders = await q.OrderByDescending(o => o.OrderDate)
+            var total = await query.CountAsync();
+            var orders = await query
+                .OrderByDescending(order => order.OrderDate)
                 .Skip(PagingHelper.Skip(paging.Page, paging.Limit))
                 .Take(paging.Limit)
+                .Select(order => new AdminOrderListItemDto
+                {
+                    OrderId = order.OrderId,
+                    OrderDate = order.OrderDate,
+                    TotalAmount = order.TotalAmount,
+                    Status = order.Status,
+                    CustomerName = order.User != null ? order.User.FullName : null,
+                    ReceiverName = order.ReceiverName,
+                    ReceiverPhone = order.ReceiverPhone,
+                    ReceiverAddress = order.ReceiverAddress,
+                    PaymentMethod = order.PaymentMethod,
+                    Note = order.Note
+                })
                 .ToListAsync();
-            var items = orders.Select(ToListItemDto).ToList();
 
-            return Ok(PagingHelper.Result(total, items, paging.Page, paging.Limit));
+            return Ok(PagingHelper.Result(total, orders, paging.Page, paging.Limit));
         }
 
         [HttpGet("{id}")]
@@ -42,9 +55,8 @@ namespace FlowerShop.Controllers.Admin
                 .Include(o => o.User)
                 .Include(o => o.OrderDetails).ThenInclude(od => od.Product)
                 .FirstOrDefaultAsync(o => o.OrderId == id);
-            if (order == null) return NotFound();
 
-            return Ok(ToDetailDto(order));
+            return order == null ? NotFound() : Ok(ToDetailDto(order));
         }
 
         [HttpPatch("{id}/status")]
@@ -65,16 +77,18 @@ namespace FlowerShop.Controllers.Admin
         [HttpPatch("{id}/cancel")]
         public async Task<IActionResult> CancelOrder(int id, [FromBody] CancelRequestDto data)
         {
-            var order = await _context.Orders.Include(o => o.OrderDetails).FirstOrDefaultAsync(o => o.OrderId == id);
+            var order = await _context.Orders
+                .Include(o => o.OrderDetails)
+                .FirstOrDefaultAsync(o => o.OrderId == id);
             if (order == null) return NotFound();
 
             if (string.IsNullOrWhiteSpace(data.Reason))
                 return BadRequest(new { message = "Vui lòng nhập lý do hủy" });
 
-            if (AdminOrderStatus.Normalize(order.Status) == AdminOrderStatus.Completed)
+            var currentStatus = AdminOrderStatus.Normalize(order.Status);
+            if (currentStatus == AdminOrderStatus.Completed)
                 return BadRequest(new { message = "Không thể hủy đơn hàng đã hoàn thành" });
-
-            if (AdminOrderStatus.Normalize(order.Status) == AdminOrderStatus.Cancelled)
+            if (currentStatus == AdminOrderStatus.Cancelled)
                 return Ok(new { success = true, message = "Đơn hàng đã được hủy trước đó" });
 
             order.Status = AdminOrderStatus.Cancelled;
@@ -82,24 +96,7 @@ namespace FlowerShop.Controllers.Admin
                 ? "Lý do hủy: " + data.Reason.Trim()
                 : order.Note + " | Lý do hủy: " + data.Reason.Trim();
 
-            var productIds = order.OrderDetails
-                .Where(detail => detail.ProductId.HasValue)
-                .Select(detail => detail.ProductId!.Value)
-                .Distinct()
-                .ToList();
-            var products = await _context.Products
-                .Where(product => productIds.Contains(product.ProductId))
-                .ToDictionaryAsync(product => product.ProductId);
-
-            foreach (var detail in order.OrderDetails)
-            {
-                if (detail.ProductId.HasValue && products.TryGetValue(detail.ProductId.Value, out var product))
-                {
-                    product.StockQuantity = (product.StockQuantity ?? 0) + detail.Quantity;
-                    product.SoldQuantity = Math.Max(0, (product.SoldQuantity ?? 0) - detail.Quantity);
-                }
-            }
-
+            await RestoreProductStock(order);
             await _context.SaveChangesAsync();
             return Ok(new { success = true });
         }
@@ -120,99 +117,72 @@ namespace FlowerShop.Controllers.Admin
                     (order.ReceiverPhone ?? "").Contains(keyword));
             }
 
-            if (f.FromDate.HasValue)
+            if (f.DateFrom.HasValue)
+                query = query.Where(order => order.OrderDate >= f.DateFrom.Value.Date);
+
+            if (f.DateTo.HasValue)
             {
-                var fromDate = f.FromDate.Value.Date;
-                query = query.Where(order => order.OrderDate >= fromDate);
+                var nextDate = f.DateTo.Value.Date.AddDays(1);
+                query = query.Where(order => order.OrderDate < nextDate);
             }
 
-            if (f.ToDate.HasValue)
+            if (!string.IsNullOrWhiteSpace(f.PaymentMethod))
             {
-                var toDate = f.ToDate.Value.Date.AddDays(1);
-                query = query.Where(order => order.OrderDate < toDate);
+                var payment = f.PaymentMethod.Trim().ToLowerInvariant();
+                query = payment == "cod"
+                    ? query.Where(order => order.PaymentMethod != null && order.PaymentMethod.ToLower() == "cod")
+                    : query.Where(order => order.PaymentMethod != null && order.PaymentMethod.ToLower() != "cod");
             }
 
-            return FilterByPayment(query, f.PaymentMethod);
+            return query;
         }
 
-        private static AdminOrderListItemDto ToListItemDto(Order order)
+        private async Task RestoreProductStock(Order order)
         {
-            return new AdminOrderListItemDto
+            var productIds = order.OrderDetails
+                .Where(detail => detail.ProductId.HasValue)
+                .Select(detail => detail.ProductId!.Value)
+                .Distinct()
+                .ToList();
+
+            var products = await _context.Products
+                .Where(product => productIds.Contains(product.ProductId))
+                .ToDictionaryAsync(product => product.ProductId);
+
+            foreach (var detail in order.OrderDetails.Where(detail => detail.ProductId.HasValue))
             {
-                OrderId = order.OrderId,
-                OrderDate = order.OrderDate,
-                TotalAmount = order.TotalAmount,
-                TotalPrice = order.TotalAmount,
-                Total = order.TotalAmount,
-                Status = order.Status,
-                CustomerName = order.User != null ? order.User.FullName : null,
-                UserName = order.User != null ? order.User.FullName : null,
-                ReceiverName = order.ReceiverName,
-                ReceiverPhone = order.ReceiverPhone,
-                ReceiverAddress = order.ReceiverAddress,
-                ShippingAddress = order.ReceiverAddress,
-                Address = order.ReceiverAddress,
-                PaymentMethod = order.PaymentMethod,
-                Note = order.Note
-            };
+                if (!products.TryGetValue(detail.ProductId!.Value, out var product)) continue;
+
+                product.StockQuantity = (product.StockQuantity ?? 0) + detail.Quantity;
+                product.SoldQuantity = Math.Max(0, (product.SoldQuantity ?? 0) - detail.Quantity);
+            }
         }
 
         private static AdminOrderDetailDto ToDetailDto(Order order)
         {
-            var dto = new AdminOrderDetailDto
+            return new AdminOrderDetailDto
             {
                 OrderId = order.OrderId,
                 OrderDate = order.OrderDate,
                 TotalAmount = order.TotalAmount,
-                TotalPrice = order.TotalAmount,
-                Total = order.TotalAmount,
                 Status = order.Status,
                 CustomerName = order.User?.FullName,
-                UserName = order.User?.FullName,
                 ReceiverName = order.ReceiverName,
                 ReceiverPhone = order.ReceiverPhone,
                 ReceiverAddress = order.ReceiverAddress,
-                ShippingAddress = order.ReceiverAddress,
-                Address = order.ReceiverAddress,
                 PaymentMethod = order.PaymentMethod,
-                Note = order.Note
+                Note = order.Note,
+                OrderDetails = order.OrderDetails.Select(detail => new AdminOrderItemDto
+                {
+                    OrderDetailId = detail.OrderDetailId,
+                    ProductId = detail.ProductId,
+                    ProductName = detail.Product?.ProductName,
+                    ImageUrl = detail.Product?.ImageUrl,
+                    Quantity = detail.Quantity,
+                    UnitPrice = detail.UnitPrice,
+                    Subtotal = detail.Subtotal
+                }).ToList()
             };
-
-            dto.OrderDetails = order.OrderDetails.Select(detail => new AdminOrderItemDto
-            {
-                OrderDetailId = detail.OrderDetailId,
-                ProductId = detail.ProductId,
-                ProductName = detail.Product?.ProductName,
-                ImageUrl = detail.Product?.ImageUrl,
-                Quantity = detail.Quantity,
-                Price = detail.UnitPrice,
-                UnitPrice = detail.UnitPrice,
-                Subtotal = detail.Subtotal
-            }).ToList();
-
-            return dto;
-        }
-
-        private static IQueryable<Order> FilterByPayment(IQueryable<Order> query, string? paymentMethod)
-        {
-            if (string.IsNullOrWhiteSpace(paymentMethod)) return query;
-
-            var payment = NormalizePaymentMethod(paymentMethod);
-            return payment == "cod"
-                ? query.Where(order => order.PaymentMethod != null && order.PaymentMethod.ToLower() == "cod")
-                : query.Where(order => order.PaymentMethod != null && order.PaymentMethod.ToLower() != "cod");
-        }
-
-        private static string NormalizePaymentMethod(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value)) return "";
-
-            var normalized = value.Trim().ToLowerInvariant()
-                .Replace(" ", "")
-                .Replace("_", "")
-                .Replace("-", "");
-
-            return normalized == "cod" ? "cod" : "payment";
         }
     }
 
@@ -220,25 +190,10 @@ namespace FlowerShop.Controllers.Admin
     {
         public int Page { get; set; } = 1;
         public int Limit { get; set; } = 10;
-        public int PageSize
-        {
-            get => Limit;
-            set => Limit = value;
-        }
         public string? Status { get; set; }
         public string? Search { get; set; }
-        public DateTime? FromDate { get; set; }
-        public DateTime? DateFrom
-        {
-            get => FromDate;
-            set => FromDate = value;
-        }
-        public DateTime? ToDate { get; set; }
-        public DateTime? DateTo
-        {
-            get => ToDate;
-            set => ToDate = value;
-        }
+        public DateTime? DateFrom { get; set; }
+        public DateTime? DateTo { get; set; }
         public string? PaymentMethod { get; set; }
     }
 
@@ -250,16 +205,11 @@ namespace FlowerShop.Controllers.Admin
         public int OrderId { get; set; }
         public DateTime? OrderDate { get; set; }
         public decimal? TotalAmount { get; set; }
-        public decimal? TotalPrice { get; set; }
-        public decimal? Total { get; set; }
         public string? Status { get; set; }
         public string? CustomerName { get; set; }
-        public string? UserName { get; set; }
         public string? ReceiverName { get; set; }
         public string? ReceiverPhone { get; set; }
         public string? ReceiverAddress { get; set; }
-        public string? ShippingAddress { get; set; }
-        public string? Address { get; set; }
         public string? PaymentMethod { get; set; }
         public string? Note { get; set; }
     }
@@ -276,7 +226,6 @@ namespace FlowerShop.Controllers.Admin
         public string? ProductName { get; set; }
         public string? ImageUrl { get; set; }
         public int Quantity { get; set; }
-        public decimal Price { get; set; }
         public decimal UnitPrice { get; set; }
         public decimal? Subtotal { get; set; }
     }

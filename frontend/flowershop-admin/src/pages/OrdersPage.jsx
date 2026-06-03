@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAdmin } from '../context/AdminContext';
 import { orderAPI } from '../services/api';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
 import {
-  ORDER_STATUS_COLOR,
+  ORDER_STATUS_BADGE,
   ORDER_STATUS_OPTIONS,
   canCancelOrder,
   getNextOrderStatus,
@@ -12,6 +12,15 @@ import {
   orderStatusLabel,
 } from '../constants/orderStatus';
 import { formatCurrency, formatDate, imageSrc } from '../utils/format';
+
+const LIMIT = 10;
+
+const paymentLabel = (method) => (
+  String(method || '').toLowerCase() === 'cod' ? 'COD' : 'Thanh toán'
+);
+
+const orderItems = (order) => order?.orderDetails || [];
+const itemTotal = (item) => item.subtotal ?? (item.unitPrice || 0) * (item.quantity || 0);
 
 export default function OrdersPage() {
   const { addToast } = useAdmin();
@@ -29,16 +38,10 @@ export default function OrdersPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [confirmOrder, setConfirmOrder] = useState(null);
 
-  const pageSize = 10;
-
-  useEffect(() => {
-    load(page);
-  }, [page, statusFilter, paymentFilter, dateFrom, dateTo]);
-
-  const load = async (nextPage = page) => {
+  async function load(nextPage = page) {
     setLoading(true);
     try {
-      const params = { page: nextPage, limit: pageSize };
+      const params = { page: nextPage, limit: LIMIT };
       if (search.trim()) params.search = search.trim();
       if (statusFilter) params.status = statusFilter;
       if (paymentFilter) params.paymentMethod = paymentFilter;
@@ -50,54 +53,48 @@ export default function OrdersPage() {
       setTotalPages(res.data.totalPages || 1);
     } catch {
       addToast('Lỗi tải đơn hàng', 'error');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }
 
-  const handleSearch = (e) => {
+  useEffect(() => { load(); }, [page, statusFilter, paymentFilter, dateFrom, dateTo]);
+
+  function handleSearch(e) {
     e.preventDefault();
     if (page === 1) load(1);
     else setPage(1);
-  };
+  }
 
-  const orderItems = (order) => order?.orderDetails || order?.items || [];
-  const orderTotal = (order) => order?.totalAmount || order?.totalPrice || order?.total || 0;
-  const itemPrice = (item) => item.price || item.unitPrice || 0;
-  const itemTotal = (item) => item.subtotal || itemPrice(item) * (item.quantity || 0);
-
-  const paymentLabel = (p) => {
-    if (!p) return '-';
-    return p.toLowerCase() === 'cod' ? 'COD' : 'Thanh toán';
-  };
-
-  const openDetail = async (id) => {
+  async function openDetail(id) {
     try {
       const res = await orderAPI.getById(id);
       setDetail(res.data);
     } catch {
       addToast('Lỗi tải chi tiết', 'error');
     }
-  };
+  }
 
-  const handleConfirmStatus = async () => {
-    if (!confirmOrder) return;
-    const next = getNextOrderStatus(confirmOrder.status);
+  async function handleConfirmStatus() {
+    const next = getNextOrderStatus(confirmOrder?.status);
     if (!next) return;
+
     try {
-      await orderAPI.updateStatus(confirmOrder.orderId || confirmOrder.id, { status: next });
+      await orderAPI.updateStatus(confirmOrder.orderId, { status: next });
       addToast('Cập nhật trạng thái thành công');
       setConfirmOrder(null);
       load();
     } catch {
       addToast('Lỗi cập nhật trạng thái', 'error');
     }
-  };
+  }
 
-  const handleCancel = async () => {
+  async function handleCancel() {
     if (!cancelReason.trim()) {
       addToast('Vui lòng nhập lý do hủy', 'error');
       return;
     }
+
     try {
       await orderAPI.cancel(cancelId, { reason: cancelReason });
       addToast('Đã hủy đơn hàng');
@@ -107,9 +104,9 @@ export default function OrdersPage() {
     } catch {
       addToast('Lỗi hủy đơn hàng', 'error');
     }
-  };
+  }
 
-  const exportPdf = () => {
+  function exportInvoice() {
     if (!detail) return;
     if (!isCompletedOrder(detail)) {
       addToast('Chỉ xuất được hóa đơn khi đơn hàng đã hoàn thành', 'error');
@@ -118,16 +115,17 @@ export default function OrdersPage() {
 
     const rows = orderItems(detail).map(item => `
       <tr>
-        <td>${item.productName || item.name || ''}</td>
+        <td>${item.productName || ''}</td>
         <td>${item.quantity || 0}</td>
-        <td>${formatCurrency(itemPrice(item))}</td>
+        <td>${formatCurrency(item.unitPrice)}</td>
         <td>${formatCurrency(itemTotal(item))}</td>
       </tr>
     `).join('');
+
     const html = `
       <html>
         <head>
-          <title>Hoa don #${detail.orderId || detail.id}</title>
+          <title>Hoa don #${detail.orderId}</title>
           <style>
             body{font-family:Arial,sans-serif;padding:24px;color:#222}
             h2{text-align:center;margin:0 0 20px}
@@ -140,153 +138,142 @@ export default function OrdersPage() {
         </head>
         <body>
           <h2>Hóa đơn bán hàng</h2>
-          <p><b>Mã đơn:</b> #${detail.orderId || detail.id}</p>
-          <p><b>Khách hàng:</b> ${detail.customerName || detail.userName || '-'}</p>
+          <p><b>Mã đơn:</b> #${detail.orderId}</p>
+          <p><b>Khách hàng:</b> ${detail.customerName || '-'}</p>
           <p><b>Người nhận:</b> ${detail.receiverName || '-'}</p>
           <p><b>SĐT:</b> ${detail.receiverPhone || '-'}</p>
-          <p><b>Địa chỉ:</b> ${detail.receiverAddress || detail.shippingAddress || detail.address || '-'}</p>
+          <p><b>Địa chỉ:</b> ${detail.receiverAddress || '-'}</p>
           <p><b>Thanh toán:</b> ${paymentLabel(detail.paymentMethod)}</p>
           <table>
             <thead><tr><th>Sản phẩm</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
-          <div class="total">Tổng: ${formatCurrency(orderTotal(detail))}</div>
+          <div class="total">Tổng: ${formatCurrency(detail.totalAmount)}</div>
         </body>
       </html>
     `;
+
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(html);
     win.document.close();
     win.focus();
     win.print();
-  };
+  }
 
   return (
     <div>
-      <h2 style={{ marginBottom: 20 }}>Quản lý đơn hàng</h2>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Quản lý đơn hàng</div>
+          <div className="page-subtitle">Duyệt, hủy và xem chi tiết đơn hàng</div>
+        </div>
+      </div>
 
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
-          <input placeholder="Tìm theo tên, SĐT..." value={search} onChange={e => setSearch(e.target.value)} style={inputStyle} />
-          <button type="submit" style={btnPrimary}>Tìm</button>
+      <div className="filters-bar">
+        <form onSubmit={handleSearch} className="gap-8">
+          <input placeholder="Tìm theo tên, SĐT..." value={search} onChange={e => setSearch(e.target.value)} />
+          <button type="submit" className="btn btn-primary">Tìm</button>
         </form>
 
-        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} style={inputStyle}>
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
           <option value="">Tất cả trạng thái</option>
           {ORDER_STATUS_OPTIONS.map(status => (
             <option key={status.value} value={status.value}>{status.label}</option>
           ))}
         </select>
 
-        <select value={paymentFilter} onChange={e => { setPaymentFilter(e.target.value); setPage(1); }} style={inputStyle}>
+        <select value={paymentFilter} onChange={e => { setPaymentFilter(e.target.value); setPage(1); }}>
           <option value="">Tất cả thanh toán</option>
           <option value="cod">COD</option>
           <option value="payment">Thanh toán</option>
         </select>
 
-        <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} style={inputStyle} />
-        <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} style={inputStyle} />
+        <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} />
+        <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} />
       </div>
 
-      {loading ? <p>Đang tải...</p> : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f8f9fa', textAlign: 'left' }}>
-              <th style={th}>#</th>
-              <th style={th}>Người nhận</th>
-              <th style={th}>SĐT</th>
-              <th style={th}>Thanh toán</th>
-              <th style={th}>Tổng tiền</th>
-              <th style={th}>Trạng thái</th>
-              <th style={th}>Ngày đặt</th>
-              <th style={th}>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.length === 0 && (
-              <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: '#888' }}>Không có đơn hàng nào</td></tr>
-            )}
-            {orders.map(o => (
-              <tr key={o.orderId || o.id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={td}>{o.orderId || o.id}</td>
-                <td style={td}>{o.receiverName || o.fullName || '-'}</td>
-                <td style={td}>{o.receiverPhone || o.phone || '-'}</td>
-                <td style={td}>{paymentLabel(o.paymentMethod)}</td>
-                <td style={td}>{formatCurrency(orderTotal(o))}</td>
-                <td style={td}>
-                  <span style={{ padding: '4px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, color: '#fff', background: ORDER_STATUS_COLOR[orderStatusLabel(o.status)] || '#666' }}>
-                    {orderStatusLabel(o.status)}
-                  </span>
-                </td>
-                <td style={td}>{formatDate(o.orderDate || o.createdDate)}</td>
-                <td style={td}>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => openDetail(o.orderId || o.id)} style={{ ...btnSmall, background: '#3498db' }}>Chi tiết</button>
-                    {getNextOrderStatus(o.status) && <button onClick={() => setConfirmOrder(o)} style={{ ...btnSmall, background: '#27ae60' }}>Duyệt</button>}
-                    {canCancelOrder(o) && (
-                      <button onClick={() => setCancelId(o.orderId || o.id)} style={{ ...btnSmall, background: '#e74c3c' }}>Hủy</button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <Pagination current={page} total={totalPages} onChange={setPage} />
-
-      {detail && (
-        <div style={backdrop} onClick={() => setDetail(null)}>
-          <div style={{ ...modalStyle, maxWidth: 660 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>Chi tiết đơn hàng #{detail.orderId || detail.id}</h3>
-              <button onClick={() => setDetail(null)} style={closeBtn}>&times;</button>
-            </div>
-
-            <div style={{ marginBottom: 16, padding: 14, background: '#f8f9fa', borderRadius: 8, fontSize: 14, lineHeight: 2 }}>
-              <p style={{ margin: 0 }}><strong>Khách hàng:</strong> {detail.customerName || detail.userName || '-'}</p>
-              <p style={{ margin: 0 }}><strong>Người nhận:</strong> {detail.receiverName || '-'}</p>
-              <p style={{ margin: 0 }}><strong>SĐT:</strong> {detail.receiverPhone || '-'}</p>
-              <p style={{ margin: 0 }}><strong>Địa chỉ:</strong> {detail.receiverAddress || detail.shippingAddress || detail.address || '-'}</p>
-              <p style={{ margin: 0 }}><strong>Thanh toán:</strong> {paymentLabel(detail.paymentMethod)}</p>
-              <p style={{ margin: 0 }}><strong>Trạng thái:</strong> {orderStatusLabel(detail.status)}</p>
-              <p style={{ margin: 0 }}><strong>Ghi chú:</strong> {detail.note || 'Không có'}</p>
-            </div>
-
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="card">
+        <div className="tbl-wrapper">
+          {loading ? <div className="spinner" /> : (
+            <table>
               <thead>
-                <tr style={{ background: '#f0f0f0' }}>
-                  <th style={th}>Ảnh</th>
-                  <th style={th}>Sản phẩm</th>
-                  <th style={th}>SL</th>
-                  <th style={th}>Đơn giá</th>
-                  <th style={th}>Thành tiền</th>
+                <tr>
+                  <th>#</th>
+                  <th>Người nhận</th>
+                  <th>SĐT</th>
+                  <th>Thanh toán</th>
+                  <th>Tổng tiền</th>
+                  <th>Trạng thái</th>
+                  <th>Ngày đặt</th>
+                  <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {orderItems(detail).map((item, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={td}>
-                      {imageSrc(item.imageUrl || item.image) && <img src={imageSrc(item.imageUrl || item.image)} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} />}
+                {orders.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40 }}>Không có đơn hàng nào</td></tr>}
+                {orders.map(order => (
+                  <tr key={order.orderId}>
+                    <td>#{order.orderId}</td>
+                    <td>{order.receiverName || '-'}</td>
+                    <td>{order.receiverPhone || '-'}</td>
+                    <td>{paymentLabel(order.paymentMethod)}</td>
+                    <td>{formatCurrency(order.totalAmount)}</td>
+                    <td><span className={`badge ${ORDER_STATUS_BADGE[orderStatusLabel(order.status)] || 'badge-pending'}`}>{orderStatusLabel(order.status)}</span></td>
+                    <td>{formatDate(order.orderDate)}</td>
+                    <td>
+                      <div className="btn-group">
+                        <button className="btn btn-info btn-sm" onClick={() => openDetail(order.orderId)}>Chi tiết</button>
+                        {getNextOrderStatus(order.status) && <button className="btn btn-success btn-sm" onClick={() => setConfirmOrder(order)}>Duyệt</button>}
+                        {canCancelOrder(order) && <button className="btn btn-danger btn-sm" onClick={() => setCancelId(order.orderId)}>Hủy</button>}
+                      </div>
                     </td>
-                    <td style={td}>{item.productName || item.name}</td>
-                    <td style={td}>{item.quantity}</td>
-                    <td style={td}>{formatCurrency(itemPrice(item))}</td>
-                    <td style={td}>{formatCurrency(itemTotal(item))}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          )}
+        </div>
+        <Pagination current={page} total={totalPages} onChange={setPage} />
+      </div>
 
-            <div style={{ textAlign: 'right', marginTop: 14, fontWeight: 700, fontSize: 16, color: '#e91e63' }}>
-              Tổng: {formatCurrency(orderTotal(detail))}
+      {detail && (
+        <div className="modal-backdrop" onClick={() => setDetail(null)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Chi tiết đơn hàng #{detail.orderId}</h3>
+              <button className="modal-close" onClick={() => setDetail(null)}>X</button>
             </div>
+            <div className="modal-body">
+              <div className="detail-box">
+                <p><strong>Khách hàng:</strong> {detail.customerName || '-'}</p>
+                <p><strong>Người nhận:</strong> {detail.receiverName || '-'}</p>
+                <p><strong>SĐT:</strong> {detail.receiverPhone || '-'}</p>
+                <p><strong>Địa chỉ:</strong> {detail.receiverAddress || '-'}</p>
+                <p><strong>Thanh toán:</strong> {paymentLabel(detail.paymentMethod)}</p>
+                <p><strong>Trạng thái:</strong> {orderStatusLabel(detail.status)}</p>
+                <p><strong>Ghi chú:</strong> {detail.note || 'Không có'}</p>
+              </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
-              <button onClick={() => setDetail(null)} style={btnDanger}>Hủy</button>
-              {isCompletedOrder(detail) && <button onClick={exportPdf} style={btnPrimary}>Xuất hóa đơn</button>}
+              <table>
+                <thead><tr><th>Ảnh</th><th>Sản phẩm</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
+                <tbody>
+                  {orderItems(detail).map(item => (
+                    <tr key={item.orderDetailId}>
+                      <td>{item.imageUrl && <img src={imageSrc(item.imageUrl)} alt="" className="img-preview img-sm" />}</td>
+                      <td>{item.productName}</td>
+                      <td>{item.quantity}</td>
+                      <td>{formatCurrency(item.unitPrice)}</td>
+                      <td>{formatCurrency(itemTotal(item))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="total-line">Tổng: {formatCurrency(detail.totalAmount)}</div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setDetail(null)}>Đóng</button>
+              {isCompletedOrder(detail) && <button className="btn btn-primary" onClick={exportInvoice}>Xuất hóa đơn</button>}
             </div>
           </div>
         </div>
@@ -295,25 +282,22 @@ export default function OrdersPage() {
       {confirmOrder && (
         <ConfirmModal
           title="Xác nhận"
-          message={`Duyệt đơn hàng #${confirmOrder.orderId || confirmOrder.id} sang trạng thái "${orderStatusLabel(getNextOrderStatus(confirmOrder.status))}"?`}
+          message={`Duyệt đơn hàng #${confirmOrder.orderId} sang trạng thái "${orderStatusLabel(getNextOrderStatus(confirmOrder.status))}"?`}
           onConfirm={handleConfirmStatus}
           onCancel={() => setConfirmOrder(null)}
         />
       )}
 
       {cancelId && (
-        <div style={backdrop} onClick={() => setCancelId(null)}>
-          <div style={{ ...modalStyle, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, marginBottom: 12 }}>Hủy đơn hàng #{cancelId}</h3>
-            <textarea
-              placeholder="Nhập lý do hủy..."
-              value={cancelReason}
-              onChange={e => setCancelReason(e.target.value)}
-              style={{ width: '100%', minHeight: 80, padding: 10, borderRadius: 6, border: '1px solid #ddd', resize: 'vertical', fontSize: 14 }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
-              <button onClick={() => { setCancelId(null); setCancelReason(''); }} style={btnDanger}>Hủy</button>
-              <button onClick={handleCancel} style={btnPrimary}>Xác nhận</button>
+        <div className="modal-backdrop" onClick={() => setCancelId(null)}>
+          <div className="modal confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header"><h3>Hủy đơn hàng #{cancelId}</h3><button className="modal-close" onClick={() => setCancelId(null)}>X</button></div>
+            <div className="modal-body">
+              <textarea rows={4} placeholder="Nhập lý do hủy..." value={cancelReason} onChange={e => setCancelReason(e.target.value)} />
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => { setCancelId(null); setCancelReason(''); }}>Đóng</button>
+              <button className="btn btn-primary" onClick={handleCancel}>Xác nhận</button>
             </div>
           </div>
         </div>
@@ -321,14 +305,3 @@ export default function OrdersPage() {
     </div>
   );
 }
-
-const inputStyle = { padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6, fontSize: 14 };
-const btnBase = { padding: '8px 18px', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontWeight: 600 };
-const btnPrimary = { ...btnBase, background: '#27ae60' };
-const btnDanger = { ...btnBase, background: '#e74c3c' };
-const btnSmall = { padding: '5px 10px', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 };
-const th = { padding: '10px 8px', fontSize: 13, fontWeight: 600 };
-const td = { padding: '10px 8px', fontSize: 13 };
-const backdrop = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 };
-const modalStyle = { background: '#fff', borderRadius: 10, padding: 24, width: '90%', maxHeight: '85vh', overflow: 'auto' };
-const closeBtn = { background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#888' };

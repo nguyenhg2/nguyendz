@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { bannerAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
@@ -30,7 +30,7 @@ export default function BannersPage() {
       if (activeFilter !== '') params.isActive = activeFilter === 'true';
 
       const res = await bannerAPI.getAll(params);
-      const data = readPagedResponse(res.data, LIMIT);
+      const data = readPagedResponse(res.data);
       setList(data.items);
       setTotal(data.total);
     } catch {

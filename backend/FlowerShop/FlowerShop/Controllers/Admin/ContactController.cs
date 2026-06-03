@@ -52,16 +52,6 @@ namespace FlowerShop.Controllers.Admin
             return Ok(c);
         }
 
-        [HttpPatch("{id}/read")]
-        public async Task<IActionResult> MarkAsRead(int id)
-        {
-            var c = await _context.Contacts.FindAsync(id);
-            if (c == null) return NotFound();
-            c.IsRead = true;
-            await _context.SaveChangesAsync();
-            return Ok(new { success = true });
-        }
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> Remove(int id)
         {

@@ -25,14 +25,6 @@ const NEXT_STATUS = {
   [ORDER_STATUS.shipping]: ORDER_STATUS.completed,
 };
 
-export const ORDER_STATUS_COLOR = {
-  [ORDER_STATUS.pending]: '#f39c12',
-  [ORDER_STATUS.confirmed]: '#3498db',
-  [ORDER_STATUS.shipping]: '#9b59b6',
-  [ORDER_STATUS.completed]: '#27ae60',
-  [ORDER_STATUS.cancelled]: '#e74c3c',
-};
-
 export const ORDER_STATUS_BADGE = {
   [ORDER_STATUS.pending]: 'badge-pending',
   [ORDER_STATUS.confirmed]: 'badge-confirmed',

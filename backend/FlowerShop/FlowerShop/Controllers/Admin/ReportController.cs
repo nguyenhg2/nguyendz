@@ -41,8 +41,7 @@ namespace FlowerShop.Controllers.Admin
                         year,
                         label = $"Ngày {g.Key}",
                         revenue = g.Sum(o => o.TotalAmount ?? 0),
-                        orders = g.Count(),
-                        value = g.Sum(o => o.TotalAmount ?? 0)
+                        orders = g.Count()
                     })
                     .OrderBy(x => x.day)
                     .ToListAsync();
@@ -56,8 +55,7 @@ namespace FlowerShop.Controllers.Admin
                     month = g.Key,
                     label = $"Tháng {g.Key}",
                     revenue = g.Sum(o => o.TotalAmount ?? 0),
-                    orders = g.Count(),
-                    value = g.Sum(o => o.TotalAmount ?? 0)
+                    orders = g.Count()
                 })
                 .OrderBy(x => x.month)
                 .ToListAsync();
@@ -98,10 +96,7 @@ namespace FlowerShop.Controllers.Admin
                     imageUrl = x.product.ImageUrl,
                     categoryName = x.product.Category != null ? x.product.Category.CategoryName : "",
                     soldQuantity = x.product.SoldQuantity ?? 0,
-                    totalRevenue = x.revenue.Select(r => r.Revenue).FirstOrDefault(),
-                    name = x.product.ProductName,
-                    sold = x.product.SoldQuantity ?? 0,
-                    revenue = x.revenue.Select(r => r.Revenue).FirstOrDefault()
+                    totalRevenue = x.revenue.Select(r => r.Revenue).FirstOrDefault()
                 })
                 .ToListAsync();
 

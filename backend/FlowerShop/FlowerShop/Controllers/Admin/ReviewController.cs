@@ -24,10 +24,6 @@ namespace FlowerShop.Controllers.Admin
             var paging = PagingHelper.Normalize(f.Page, f.Limit);
             var q = _context.Reviews.AsNoTracking().Include(r => r.Product).Include(r => r.User).AsQueryable();
 
-            if (f.ProductId.HasValue)
-                q = q.Where(r => r.ProductId == f.ProductId);
-            if (f.UserId.HasValue)
-                q = q.Where(r => r.UserId == f.UserId);
             if (f.MinRating.HasValue)
                 q = q.Where(r => r.Rating >= f.MinRating);
             if (f.MaxRating.HasValue)
@@ -65,8 +61,6 @@ namespace FlowerShop.Controllers.Admin
     {
         public int Page { get; set; } = 1;
         public int Limit { get; set; } = 10;
-        public int? ProductId { get; set; }
-        public int? UserId { get; set; }
         public int? MinRating { get; set; }
         public int? MaxRating { get; set; }
         public string? Search { get; set; }

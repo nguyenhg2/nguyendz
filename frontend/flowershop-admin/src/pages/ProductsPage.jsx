@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { productAPI, categoryAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
@@ -49,7 +49,7 @@ export default function ProductsPage() {
   async function load() {
     setLoading(true);
     try {
-      const params = { page, limit: LIMIT, includeInactive: true };
+      const params = { page, limit: LIMIT };
       if (search) params.search = search;
       if (catFilter) params.categoryId = catFilter;
       if (activeFilter !== '') params.isActive = activeFilter === 'true';
@@ -58,7 +58,7 @@ export default function ProductsPage() {
       if (maxPrice) params.maxPrice = maxPrice;
       if (sortBy) params.sortBy = sortBy;
       const res = await productAPI.getAll(params);
-      const { items, total } = readPagedResponse(res.data, LIMIT);
+      const { items, total } = readPagedResponse(res.data);
       setList(items);
       setTotal(total);
     } catch { addToast('Lỗi tải sản phẩm', 'error'); }
@@ -66,7 +66,7 @@ export default function ProductsPage() {
   }
 
   useEffect(() => { load(); }, [page, search, catFilter, activeFilter, featuredFilter, minPrice, maxPrice, sortBy]);
-  useEffect(() => { categoryAPI.getAll({ limit: 100, includeInactive: true }).then(r => setCats(r.data.items || r.data || [])); }, []);
+  useEffect(() => { categoryAPI.getAll({ limit: 100 }).then(r => setCats(r.data.items || r.data || [])); }, []);
   useEffect(() => () => filePreviews.forEach(p => URL.revokeObjectURL(p.url)), [filePreviews]);
 
   const resetFilter = () => { setSearch(''); setCatFilter(''); setActiveFilter(''); setFeaturedFilter(''); setMinPrice(''); setMaxPrice(''); setSortBy(''); setPage(1); };

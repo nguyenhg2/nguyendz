@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { categoryAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
@@ -25,12 +25,12 @@ export default function CategoriesPage() {
   async function load() {
     setLoading(true);
     try {
-      const params = { page, limit: LIMIT, includeInactive: true };
+      const params = { page, limit: LIMIT };
       if (search) params.search = search;
       if (activeFilter !== '') params.isActive = activeFilter === 'true';
 
       const res = await categoryAPI.getAll(params);
-      const data = readPagedResponse(res.data, LIMIT);
+      const data = readPagedResponse(res.data);
       setList(data.items);
       setTotal(data.total);
     } catch {

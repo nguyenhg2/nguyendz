@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAdmin } from '../context/AdminContext';
 import { PAGE_TITLES } from '../constants/navigation';
 import { adminInitial } from '../utils/adminUser';
