@@ -25,31 +25,13 @@ namespace FlowerShop.Controllers.Admin
             var q = BuildOrderQuery(f);
 
             var total = await q.CountAsync();
-            var totalPages = (int)Math.Ceiling((double)total / paging.Limit);
-            var items = await q.OrderByDescending(o => o.OrderDate)
-                .Skip((paging.Page - 1) * paging.Limit)
+            var orders = await q.OrderByDescending(o => o.OrderDate)
+                .Skip(PagingHelper.Skip(paging.Page, paging.Limit))
                 .Take(paging.Limit)
-                .Select(order => new AdminOrderListItemDto
-                {
-                    OrderId = order.OrderId,
-                    OrderDate = order.OrderDate,
-                    TotalAmount = order.TotalAmount,
-                    TotalPrice = order.TotalAmount,
-                    Total = order.TotalAmount,
-                    Status = order.Status,
-                    CustomerName = order.User != null ? order.User.FullName : null,
-                    UserName = order.User != null ? order.User.FullName : null,
-                    ReceiverName = order.ReceiverName,
-                    ReceiverPhone = order.ReceiverPhone,
-                    ReceiverAddress = order.ReceiverAddress,
-                    ShippingAddress = order.ReceiverAddress,
-                    Address = order.ReceiverAddress,
-                    PaymentMethod = order.PaymentMethod,
-                    Note = order.Note
-                })
                 .ToListAsync();
+            var items = orders.Select(ToListItemDto).ToList();
 
-            return Ok(new { total, totalItems = total, totalPages, items });
+            return Ok(PagingHelper.Result(total, items, paging.Page, paging.Limit));
         }
 
         [HttpGet("{id}")]
@@ -62,7 +44,122 @@ namespace FlowerShop.Controllers.Admin
                 .FirstOrDefaultAsync(o => o.OrderId == id);
             if (order == null) return NotFound();
 
-            return Ok(new AdminOrderDetailDto
+            return Ok(ToDetailDto(order));
+        }
+
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] StatusUpdateDto data)
+        {
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null) return NotFound();
+
+            var nextStatus = AdminOrderStatus.Normalize(data.Status);
+            if (!AdminOrderStatus.IsValid(nextStatus))
+                return BadRequest(new { message = "Trạng thái đơn hàng không hợp lệ" });
+
+            order.Status = nextStatus;
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, status = order.Status });
+        }
+
+        [HttpPatch("{id}/cancel")]
+        public async Task<IActionResult> CancelOrder(int id, [FromBody] CancelRequestDto data)
+        {
+            var order = await _context.Orders.Include(o => o.OrderDetails).FirstOrDefaultAsync(o => o.OrderId == id);
+            if (order == null) return NotFound();
+
+            if (string.IsNullOrWhiteSpace(data.Reason))
+                return BadRequest(new { message = "Vui lòng nhập lý do hủy" });
+
+            if (AdminOrderStatus.Normalize(order.Status) == AdminOrderStatus.Completed)
+                return BadRequest(new { message = "Không thể hủy đơn hàng đã hoàn thành" });
+
+            if (AdminOrderStatus.Normalize(order.Status) == AdminOrderStatus.Cancelled)
+                return Ok(new { success = true, message = "Đơn hàng đã được hủy trước đó" });
+
+            order.Status = AdminOrderStatus.Cancelled;
+            order.Note = string.IsNullOrEmpty(order.Note)
+                ? "Lý do hủy: " + data.Reason.Trim()
+                : order.Note + " | Lý do hủy: " + data.Reason.Trim();
+
+            var productIds = order.OrderDetails
+                .Where(detail => detail.ProductId.HasValue)
+                .Select(detail => detail.ProductId!.Value)
+                .Distinct()
+                .ToList();
+            var products = await _context.Products
+                .Where(product => productIds.Contains(product.ProductId))
+                .ToDictionaryAsync(product => product.ProductId);
+
+            foreach (var detail in order.OrderDetails)
+            {
+                if (detail.ProductId.HasValue && products.TryGetValue(detail.ProductId.Value, out var product))
+                {
+                    product.StockQuantity = (product.StockQuantity ?? 0) + detail.Quantity;
+                    product.SoldQuantity = Math.Max(0, (product.SoldQuantity ?? 0) - detail.Quantity);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true });
+        }
+
+        private IQueryable<Order> BuildOrderQuery(OrderSearchParams f)
+        {
+            var query = _context.Orders.AsNoTracking().Include(order => order.User).AsQueryable();
+
+            var status = AdminOrderStatus.Normalize(f.Status);
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(order => order.Status == status);
+
+            if (!string.IsNullOrWhiteSpace(f.Search))
+            {
+                var keyword = f.Search.Trim();
+                query = query.Where(order =>
+                    (order.ReceiverName ?? "").Contains(keyword) ||
+                    (order.ReceiverPhone ?? "").Contains(keyword));
+            }
+
+            if (f.FromDate.HasValue)
+            {
+                var fromDate = f.FromDate.Value.Date;
+                query = query.Where(order => order.OrderDate >= fromDate);
+            }
+
+            if (f.ToDate.HasValue)
+            {
+                var toDate = f.ToDate.Value.Date.AddDays(1);
+                query = query.Where(order => order.OrderDate < toDate);
+            }
+
+            return FilterByPayment(query, f.PaymentMethod);
+        }
+
+        private static AdminOrderListItemDto ToListItemDto(Order order)
+        {
+            return new AdminOrderListItemDto
+            {
+                OrderId = order.OrderId,
+                OrderDate = order.OrderDate,
+                TotalAmount = order.TotalAmount,
+                TotalPrice = order.TotalAmount,
+                Total = order.TotalAmount,
+                Status = order.Status,
+                CustomerName = order.User != null ? order.User.FullName : null,
+                UserName = order.User != null ? order.User.FullName : null,
+                ReceiverName = order.ReceiverName,
+                ReceiverPhone = order.ReceiverPhone,
+                ReceiverAddress = order.ReceiverAddress,
+                ShippingAddress = order.ReceiverAddress,
+                Address = order.ReceiverAddress,
+                PaymentMethod = order.PaymentMethod,
+                Note = order.Note
+            };
+        }
+
+        private static AdminOrderDetailDto ToDetailDto(Order order)
+        {
+            var dto = new AdminOrderDetailDto
             {
                 OrderId = order.OrderId,
                 OrderDate = order.OrderDate,
@@ -78,78 +175,22 @@ namespace FlowerShop.Controllers.Admin
                 ShippingAddress = order.ReceiverAddress,
                 Address = order.ReceiverAddress,
                 PaymentMethod = order.PaymentMethod,
-                Note = order.Note,
-                OrderDetails = order.OrderDetails.Select(detail => new AdminOrderItemDto
-                {
-                    OrderDetailId = detail.OrderDetailId,
-                    ProductId = detail.ProductId,
-                    ProductName = detail.Product?.ProductName,
-                    ImageUrl = detail.Product?.ImageUrl,
-                    Quantity = detail.Quantity,
-                    Price = detail.UnitPrice,
-                    UnitPrice = detail.UnitPrice,
-                    Subtotal = detail.Subtotal
-                }).ToList()
-            });
-        }
+                Note = order.Note
+            };
 
-        [HttpPatch("{id}/status")]
-        public async Task<IActionResult> UpdateStatus(int id, [FromBody] StatusUpdateDto data)
-        {
-            var order = await _context.Orders.FindAsync(id);
-            if (order == null) return NotFound();
-            order.Status = data.Status;
-            await _context.SaveChangesAsync();
-            return Ok(new { success = true, status = order.Status });
-        }
-
-        [HttpPatch("{id}/cancel")]
-        public async Task<IActionResult> CancelOrder(int id, [FromBody] CancelRequestDto data)
-        {
-            var order = await _context.Orders.Include(o => o.OrderDetails).FirstOrDefaultAsync(o => o.OrderId == id);
-            if (order == null) return NotFound();
-
-            order.Status = "Đã hủy";
-            order.Note = string.IsNullOrEmpty(order.Note)
-                ? "Lý do hủy: " + data.Reason
-                : order.Note + " | Lý do hủy: " + data.Reason;
-
-            foreach (var detail in order.OrderDetails)
+            dto.OrderDetails = order.OrderDetails.Select(detail => new AdminOrderItemDto
             {
-                var product = await _context.Products.FindAsync(detail.ProductId);
-                if (product != null)
-                {
-                    product.StockQuantity = (product.StockQuantity ?? 0) + detail.Quantity;
-                    product.SoldQuantity = (product.SoldQuantity ?? 0) - detail.Quantity;
-                }
-            }
+                OrderDetailId = detail.OrderDetailId,
+                ProductId = detail.ProductId,
+                ProductName = detail.Product?.ProductName,
+                ImageUrl = detail.Product?.ImageUrl,
+                Quantity = detail.Quantity,
+                Price = detail.UnitPrice,
+                UnitPrice = detail.UnitPrice,
+                Subtotal = detail.Subtotal
+            }).ToList();
 
-            await _context.SaveChangesAsync();
-            return Ok(new { success = true });
-        }
-
-        private IQueryable<Order> BuildOrderQuery(OrderSearchParams f)
-        {
-            var query = _context.Orders.AsNoTracking().Include(order => order.User).AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(f.Status))
-                query = query.Where(order => order.Status == f.Status);
-
-            if (!string.IsNullOrWhiteSpace(f.Search))
-            {
-                var keyword = f.Search.Trim();
-                query = query.Where(order =>
-                    (order.ReceiverName ?? "").Contains(keyword) ||
-                    (order.ReceiverPhone ?? "").Contains(keyword));
-            }
-
-            if (f.FromDate.HasValue)
-                query = query.Where(order => order.OrderDate >= f.FromDate);
-
-            if (f.ToDate.HasValue)
-                query = query.Where(order => order.OrderDate <= f.ToDate);
-
-            return FilterByPayment(query, f.PaymentMethod);
+            return dto;
         }
 
         private static IQueryable<Order> FilterByPayment(IQueryable<Order> query, string? paymentMethod)

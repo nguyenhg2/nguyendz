@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAdmin } from '../context/AdminContext';
-import { authAPI } from '../services/api';
+import { adminAuth, authAPI } from '../services/api';
+import { adminName } from '../utils/adminUser';
 
 export default function LoginPage() {
   const { setAdmin, navigate, addToast } = useAdmin();
@@ -8,24 +9,32 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const updateField = (key, value) => setForm(current => ({ ...current, [key]: value }));
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!form.email || !form.password) { setError('Vui lòng nhập đầy đủ thông tin'); return; }
+    if (!form.email || !form.password) {
+      setError('Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+
     setLoading(true);
     setError('');
+
     try {
       const res = await authAPI.login(form);
       const { token, user } = res.data;
-      if (user.role !== 'Admin') {
+      const role = user.role || user.Role;
+
+      if (role !== 'Admin') {
         setError('Tài khoản không có quyền truy cập trang quản trị');
         setLoading(false);
         return;
       }
-      localStorage.setItem('admin_token', token);
+
+      adminAuth.setToken(token);
       setAdmin(user);
-      addToast(`Chào mừng, ${user.fullName}!`);
+      addToast(`Chào mừng, ${adminName(user)}!`);
       navigate('dashboard');
     } catch (err) {
       setError(err?.response?.data?.message || 'Email hoặc mật khẩu không đúng');
@@ -49,11 +58,11 @@ export default function LoginPage() {
         <form onSubmit={handleLogin}>
           <div className="form-group" style={{ marginBottom: 14 }}>
             <label>Email</label>
-            <input type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="admin@gmail.com" autoFocus />
+            <input type="email" value={form.email} onChange={e => updateField('email', e.target.value)} placeholder="admin@gmail.com" autoFocus />
           </div>
           <div className="form-group" style={{ marginBottom: 22 }}>
             <label>Mật khẩu</label>
-            <input type="password" value={form.password} onChange={e => set('password', e.target.value)} placeholder="••••••••" />
+            <input type="password" value={form.password} onChange={e => updateField('password', e.target.value)} placeholder="••••••••" />
           </div>
           <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 15 }} disabled={loading}>
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}

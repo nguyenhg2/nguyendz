@@ -1,24 +1,7 @@
 import React from 'react';
 import { useAdmin } from '../context/AdminContext';
-
-const MENU = [
-  { section: 'Tổng quan' },
-  { key: 'dashboard', label: 'Dashboard' },
-
-  { section: 'Nội dung' },
-  { key: 'categories', label: 'Danh mục' },
-  { key: 'products', label: 'Sản phẩm' },
-  { key: 'banners', label: 'Banner' },
-
-  { section: 'Kinh doanh' },
-  { key: 'orders', label: 'Đơn hàng' },
-  { key: 'customers', label: 'Khách hàng' },
-  { key: 'reviews', label: 'Đánh giá' },
-
-  { section: 'Hỗ trợ' },
-  { key: 'contacts', label: 'Liên hệ' },
-  { key: 'reports', label: 'Báo cáo' },
-];
+import { MENU_ITEMS } from '../constants/navigation';
+import { adminEmail, adminInitial, adminName } from '../utils/adminUser';
 
 export default function Sidebar() {
   const { page, navigate, admin, logout } = useAdmin();
@@ -31,7 +14,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
-        {MENU.map((item, i) =>
+        {MENU_ITEMS.map((item, i) =>
           item.section ? (
             <div key={i} className="nav-section">{item.section}</div>
           ) : (
@@ -49,11 +32,11 @@ export default function Sidebar() {
       <div className="sidebar-footer">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <div className="avatar" style={{ background: '#c84b6b22', color: '#c84b6b' }}>
-            {admin?.FullName?.[0] || 'A'}
+            {adminInitial(admin)}
           </div>
           <div>
-            <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{admin?.FullName || 'Admin'}</div>
-            <div style={{ color: 'rgba(255,255,255,.4)', fontSize: 11 }}>{admin?.Email || ''}</div>
+            <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{adminName(admin)}</div>
+            <div style={{ color: 'rgba(255,255,255,.4)', fontSize: 11 }}>{adminEmail(admin)}</div>
           </div>
         </div>
         <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', fontSize: 13 }} onClick={logout}>

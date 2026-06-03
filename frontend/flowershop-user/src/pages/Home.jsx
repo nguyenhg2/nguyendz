@@ -9,6 +9,28 @@ const imgSrc = (url) => {
   return IMG_URL + url;
 };
 
+const bannerFrameStyle = {
+  position: 'relative',
+  width: '100%',
+  height: 'clamp(260px, 36vw, 430px)',
+  borderRadius: 20,
+  overflow: 'hidden',
+  margin: '0 auto 48px',
+  maxWidth: 1200,
+  background: '#fff4f6',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+};
+
+const bannerImageStyle = {
+  position: 'relative',
+  zIndex: 1,
+  width: '100%',
+  height: '100%',
+  objectFit: 'contain',
+  objectPosition: 'center',
+  display: 'block',
+};
+
 export default function HomePage() {
   const { navigate } = useContext(AppContext);
   const [banners, setBanners] = useState([]);
@@ -56,37 +78,48 @@ export default function HomePage() {
 
   return (
     <div className="page">
-      <div style={{position: 'relative',width: '100%',height: 500,borderRadius: 20,overflow: 'hidden',margin: '0 auto 48px',maxWidth: 1200,boxShadow: '0 8px 32px rgba(0,0,0,0.12)'}}>
+      <div style={bannerFrameStyle}>
         {banners.map((b, i) => (
           <div key={b.id || i} style={{position: 'absolute',inset: 0,opacity: i === bannerIdx ? 1 : 0,transition: 'opacity 1s ease',pointerEvents: i === bannerIdx ? 'auto' : 'none'}}>
             {b.imageUrl ? (
-              <img src={imgSrc(b.imageUrl)} alt={b.title || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}/>
+              <>
+                <div style={{ position: 'absolute', inset: 0, background: b.bg || '#fff4f6' }} />
+                <img
+                  src={imgSrc(b.imageUrl)}
+                  alt=""
+                  aria-hidden="true"
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', filter: 'blur(18px)', transform: 'scale(1.08)', opacity: 0.25 }}
+                />
+                <img src={imgSrc(b.imageUrl)} alt={b.title || ''} style={bannerImageStyle}/>
+              </>
             ) : (
               <div style={{ width: '100%', height: '100%', background: b.bg || 'linear-gradient(135deg, #c84b6b, #e8a4b8)' }}/>
             )}
 
-            <div style={{position: 'absolute',inset: 0,background: 'linear-gradient(135deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)',display: 'flex',flexDirection: 'column',justifyContent: 'center',padding: '0 80px'}}>
-              {b.title && (
-                <div style={{fontFamily: 'Playfair Display, serif',fontSize: 44,fontWeight: 700,color: '#fff',marginBottom: 16,textShadow: '0 3px 12px rgba(0,0,0,0.4)',maxWidth: 500,lineHeight: 1.2}}>
-                  {b.title}
-                </div>
-              )}
-              {b.sub && (
-                <div style={{fontSize: 17,color: '#fff',opacity: 0.92,marginBottom: 28,maxWidth: 420,lineHeight: 1.5,textShadow: '0 1px 6px rgba(0,0,0,0.3)'}}>
-                  {b.sub}
-                </div>
-              )}
-              {b.cta && (
-                <button
-                  className="btn"
-                  style={{background: '#fff',color: '#c84b6b',padding: '14px 36px',fontSize: 15,borderRadius: 50,width: 'fit-content',fontWeight: 700,boxShadow: '0 4px 16px rgba(200,75,107,0.3)',border: 'none',cursor: 'pointer',transition: 'transform 0.2s'}}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = ''}
-                  onClick={() => navigate('category', {})}>
-                  {b.cta}
-                </button>
-              )}
-            </div>
+            {!b.imageUrl && (
+              <div style={{position: 'absolute',inset: 0,background: 'linear-gradient(135deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)',display: 'flex',flexDirection: 'column',justifyContent: 'center',padding: '0 80px'}}>
+                {b.title && (
+                  <div style={{fontFamily: 'Playfair Display, serif',fontSize: 44,fontWeight: 700,color: '#fff',marginBottom: 16,textShadow: '0 3px 12px rgba(0,0,0,0.4)',maxWidth: 500,lineHeight: 1.2}}>
+                    {b.title}
+                  </div>
+                )}
+                {b.sub && (
+                  <div style={{fontSize: 17,color: '#fff',opacity: 0.92,marginBottom: 28,maxWidth: 420,lineHeight: 1.5,textShadow: '0 1px 6px rgba(0,0,0,0.3)'}}>
+                    {b.sub}
+                  </div>
+                )}
+                {b.cta && (
+                  <button
+                    className="btn"
+                    style={{background: '#fff',color: '#c84b6b',padding: '14px 36px',fontSize: 15,borderRadius: 50,width: 'fit-content',fontWeight: 700,boxShadow: '0 4px 16px rgba(200,75,107,0.3)',border: 'none',cursor: 'pointer',transition: 'transform 0.2s'}}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = ''}
+                    onClick={() => navigate('category', {})}>
+                    {b.cta}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
 
@@ -96,7 +129,7 @@ export default function HomePage() {
               <div
                 key={i}
                 onClick={() => setBannerIdx(i)}
-                style={{width: i === bannerIdx ? 32 : 12,height: 12,borderRadius: 6,background: i === bannerIdx ? '#fff' : 'rgba(255,255,255,0.4)',cursor: 'pointer',transition: 'all .3s ease',boxShadow: '0 2px 6px rgba(0,0,0,0.2)'}}
+                style={{width: i === bannerIdx ? 32 : 12,height: 12,borderRadius: 6,background: i === bannerIdx ? '#c84b6b' : 'rgba(70,70,70,0.25)',border: '1px solid rgba(255,255,255,0.75)',cursor: 'pointer',transition: 'all .3s ease',boxShadow: '0 2px 6px rgba(0,0,0,0.18)'}}
               />
             ))}
           </div>

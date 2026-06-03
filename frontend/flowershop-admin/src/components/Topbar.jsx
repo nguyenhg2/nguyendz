@@ -1,17 +1,7 @@
 import React from 'react';
 import { useAdmin } from '../context/AdminContext';
-
-const PAGE_TITLES = {
-  dashboard:  'Dashboard',
-  categories: 'Quản lý danh mục',
-  products:   'Quản lý sản phẩm',
-  orders:     'Quản lý đơn hàng',
-  customers:  'Quản lý khách hàng',
-  reviews:    'Quản lý đánh giá',
-  banners:    'Quản lý banner',
-  contacts:   'Quản lý liên hệ',
-  reports:    'Báo cáo thống kê',
-};
+import { PAGE_TITLES } from '../constants/navigation';
+import { adminInitial } from '../utils/adminUser';
 
 export default function Topbar() {
   const { page, admin } = useAdmin();
@@ -27,7 +17,7 @@ export default function Topbar() {
         <div style={{ background: '#f3f4f6', borderRadius: 8, padding: '6px 12px', fontSize: 12, color: 'var(--muted)' }}>
           Shop hoa Mộng Lan
         </div>
-        <div className="avatar">{admin?.FullName?.[0] || 'A'}</div>
+        <div className="avatar">{adminInitial(admin)}</div>
       </div>
     </header>
   );

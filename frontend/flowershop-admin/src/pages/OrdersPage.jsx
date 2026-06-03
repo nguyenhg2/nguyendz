@@ -1,8 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useAdmin } from '../context/AdminContext';
-import { orderAPI, IMG_URL } from '../services/api';
+import { orderAPI } from '../services/api';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
+import {
+  ORDER_STATUS_COLOR,
+  ORDER_STATUS_OPTIONS,
+  canCancelOrder,
+  getNextOrderStatus,
+  isCompletedOrder,
+  orderStatusLabel,
+} from '../constants/orderStatus';
+import { formatCurrency, formatDate, imageSrc } from '../utils/format';
 
 export default function OrdersPage() {
   const { addToast } = useAdmin();
@@ -29,7 +38,7 @@ export default function OrdersPage() {
   const load = async (nextPage = page) => {
     setLoading(true);
     try {
-      const params = { page: nextPage, pageSize };
+      const params = { page: nextPage, limit: pageSize };
       if (search.trim()) params.search = search.trim();
       if (statusFilter) params.status = statusFilter;
       if (paymentFilter) params.paymentMethod = paymentFilter;
@@ -51,61 +60,14 @@ export default function OrdersPage() {
     else setPage(1);
   };
 
-  const imgSrc = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    return IMG_URL + url;
-  };
-
-  const fmt = (n) => Number(n || 0).toLocaleString('vi-VN') + 'đ';
   const orderItems = (order) => order?.orderDetails || order?.items || [];
   const orderTotal = (order) => order?.totalAmount || order?.totalPrice || order?.total || 0;
   const itemPrice = (item) => item.price || item.unitPrice || 0;
   const itemTotal = (item) => item.subtotal || itemPrice(item) * (item.quantity || 0);
-  const isCompletedOrder = (order) => ['Completed', 'Hoàn thành'].includes(order?.status);
-
-  const statusLabel = (s) => {
-    const map = {
-      Pending: 'Chờ xử lý',
-      Confirmed: 'Đã xác nhận',
-      Shipping: 'Đang giao',
-      Completed: 'Hoàn thành',
-      Cancelled: 'Đã hủy'
-    };
-    return map[s] || s;
-  };
-
-  const statusColor = (s) => {
-    const map = {
-      Pending: '#f39c12',
-      Confirmed: '#3498db',
-      Shipping: '#9b59b6',
-      Completed: '#27ae60',
-      Cancelled: '#e74c3c',
-      'Chờ xử lý': '#f39c12',
-      'Đã xác nhận': '#3498db',
-      'Đang giao': '#9b59b6',
-      'Hoàn thành': '#27ae60',
-      'Đã hủy': '#e74c3c'
-    };
-    return map[s] || '#666';
-  };
 
   const paymentLabel = (p) => {
     if (!p) return '-';
     return p.toLowerCase() === 'cod' ? 'COD' : 'Thanh toán';
-  };
-
-  const nextStatus = (s) => {
-    const flow = {
-      Pending: 'Confirmed',
-      Confirmed: 'Shipping',
-      Shipping: 'Completed',
-      'Chờ xử lý': 'Đã xác nhận',
-      'Đã xác nhận': 'Đang giao',
-      'Đang giao': 'Hoàn thành'
-    };
-    return flow[s] || null;
   };
 
   const openDetail = async (id) => {
@@ -119,7 +81,7 @@ export default function OrdersPage() {
 
   const handleConfirmStatus = async () => {
     if (!confirmOrder) return;
-    const next = nextStatus(confirmOrder.status);
+    const next = getNextOrderStatus(confirmOrder.status);
     if (!next) return;
     try {
       await orderAPI.updateStatus(confirmOrder.orderId || confirmOrder.id, { status: next });
@@ -158,8 +120,8 @@ export default function OrdersPage() {
       <tr>
         <td>${item.productName || item.name || ''}</td>
         <td>${item.quantity || 0}</td>
-        <td>${fmt(itemPrice(item))}</td>
-        <td>${fmt(itemTotal(item))}</td>
+        <td>${formatCurrency(itemPrice(item))}</td>
+        <td>${formatCurrency(itemTotal(item))}</td>
       </tr>
     `).join('');
     const html = `
@@ -188,7 +150,7 @@ export default function OrdersPage() {
             <thead><tr><th>Sản phẩm</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
-          <div class="total">Tổng: ${fmt(orderTotal(detail))}</div>
+          <div class="total">Tổng: ${formatCurrency(orderTotal(detail))}</div>
         </body>
       </html>
     `;
@@ -212,11 +174,9 @@ export default function OrdersPage() {
 
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} style={inputStyle}>
           <option value="">Tất cả trạng thái</option>
-          <option value="Pending">Chờ xử lý</option>
-          <option value="Confirmed">Đã xác nhận</option>
-          <option value="Shipping">Đang giao</option>
-          <option value="Completed">Hoàn thành</option>
-          <option value="Cancelled">Đã hủy</option>
+          {ORDER_STATUS_OPTIONS.map(status => (
+            <option key={status.value} value={status.value}>{status.label}</option>
+          ))}
         </select>
 
         <select value={paymentFilter} onChange={e => { setPaymentFilter(e.target.value); setPage(1); }} style={inputStyle}>
@@ -253,18 +213,18 @@ export default function OrdersPage() {
                 <td style={td}>{o.receiverName || o.fullName || '-'}</td>
                 <td style={td}>{o.receiverPhone || o.phone || '-'}</td>
                 <td style={td}>{paymentLabel(o.paymentMethod)}</td>
-                <td style={td}>{fmt(orderTotal(o))}</td>
+                <td style={td}>{formatCurrency(orderTotal(o))}</td>
                 <td style={td}>
-                  <span style={{ padding: '4px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, color: '#fff', background: statusColor(o.status) }}>
-                    {statusLabel(o.status)}
+                  <span style={{ padding: '4px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600, color: '#fff', background: ORDER_STATUS_COLOR[orderStatusLabel(o.status)] || '#666' }}>
+                    {orderStatusLabel(o.status)}
                   </span>
                 </td>
-                <td style={td}>{new Date(o.orderDate || o.createdDate).toLocaleDateString('vi-VN')}</td>
+                <td style={td}>{formatDate(o.orderDate || o.createdDate)}</td>
                 <td style={td}>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => openDetail(o.orderId || o.id)} style={{ ...btnSmall, background: '#3498db' }}>Chi tiết</button>
-                    {nextStatus(o.status) && <button onClick={() => setConfirmOrder(o)} style={{ ...btnSmall, background: '#27ae60' }}>Duyệt</button>}
-                    {o.status !== 'Cancelled' && o.status !== 'Completed' && o.status !== 'Đã hủy' && o.status !== 'Hoàn thành' && (
+                    {getNextOrderStatus(o.status) && <button onClick={() => setConfirmOrder(o)} style={{ ...btnSmall, background: '#27ae60' }}>Duyệt</button>}
+                    {canCancelOrder(o) && (
                       <button onClick={() => setCancelId(o.orderId || o.id)} style={{ ...btnSmall, background: '#e74c3c' }}>Hủy</button>
                     )}
                   </div>
@@ -291,7 +251,7 @@ export default function OrdersPage() {
               <p style={{ margin: 0 }}><strong>SĐT:</strong> {detail.receiverPhone || '-'}</p>
               <p style={{ margin: 0 }}><strong>Địa chỉ:</strong> {detail.receiverAddress || detail.shippingAddress || detail.address || '-'}</p>
               <p style={{ margin: 0 }}><strong>Thanh toán:</strong> {paymentLabel(detail.paymentMethod)}</p>
-              <p style={{ margin: 0 }}><strong>Trạng thái:</strong> {statusLabel(detail.status)}</p>
+              <p style={{ margin: 0 }}><strong>Trạng thái:</strong> {orderStatusLabel(detail.status)}</p>
               <p style={{ margin: 0 }}><strong>Ghi chú:</strong> {detail.note || 'Không có'}</p>
             </div>
 
@@ -309,19 +269,19 @@ export default function OrdersPage() {
                 {orderItems(detail).map((item, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
                     <td style={td}>
-                      {imgSrc(item.imageUrl || item.image) && <img src={imgSrc(item.imageUrl || item.image)} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} />}
+                      {imageSrc(item.imageUrl || item.image) && <img src={imageSrc(item.imageUrl || item.image)} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} />}
                     </td>
                     <td style={td}>{item.productName || item.name}</td>
                     <td style={td}>{item.quantity}</td>
-                    <td style={td}>{fmt(itemPrice(item))}</td>
-                    <td style={td}>{fmt(itemTotal(item))}</td>
+                    <td style={td}>{formatCurrency(itemPrice(item))}</td>
+                    <td style={td}>{formatCurrency(itemTotal(item))}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
             <div style={{ textAlign: 'right', marginTop: 14, fontWeight: 700, fontSize: 16, color: '#e91e63' }}>
-              Tổng: {fmt(orderTotal(detail))}
+              Tổng: {formatCurrency(orderTotal(detail))}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
@@ -335,7 +295,7 @@ export default function OrdersPage() {
       {confirmOrder && (
         <ConfirmModal
           title="Xác nhận"
-          message={`Duyệt đơn hàng #${confirmOrder.orderId || confirmOrder.id} sang trạng thái "${statusLabel(nextStatus(confirmOrder.status))}"?`}
+          message={`Duyệt đơn hàng #${confirmOrder.orderId || confirmOrder.id} sang trạng thái "${orderStatusLabel(getNextOrderStatus(confirmOrder.status))}"?`}
           onConfirm={handleConfirmStatus}
           onCancel={() => setConfirmOrder(null)}
         />

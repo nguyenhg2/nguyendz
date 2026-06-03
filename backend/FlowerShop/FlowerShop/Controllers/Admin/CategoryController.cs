@@ -35,9 +35,11 @@ namespace FlowerShop.Controllers.Admin
 
             var total = await q.CountAsync();
             var items = await q.OrderBy(c => c.SortOrder)
-                .Skip((page - 1) * limit).Take(limit).ToListAsync();
+                .Skip(PagingHelper.Skip(page, limit))
+                .Take(limit)
+                .ToListAsync();
 
-            return Ok(new { total, items });
+            return Ok(PagingHelper.Result(total, items, page, limit));
         }
 
         [HttpGet("{id}")]
@@ -102,18 +104,18 @@ namespace FlowerShop.Controllers.Admin
         [HttpPost("{id}/image")]
         public async Task<IActionResult> UploadImage(int id, IFormFile file)
         {
-            if (file == null) return BadRequest();
             var c = await _context.Categories.FindAsync(id);
             if (c == null) return NotFound();
 
-            var folder = Path.Combine(_env.WebRootPath, "uploads/categories");
-            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+            try
+            {
+                c.ImageUrl = await UploadHelper.SaveImageAsync(_env, file, "categories");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
 
-            var fileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
-            using var stream = new FileStream(Path.Combine(folder, fileName), FileMode.Create);
-            await file.CopyToAsync(stream);
-
-            c.ImageUrl = "/uploads/categories/" + fileName;
             await _context.SaveChangesAsync();
             return Ok(new { imageUrl = c.ImageUrl });
         }

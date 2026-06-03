@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { userAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
+import { formatDate } from '../utils/format';
 
-const fmtDate = d => d ? new Date(d).toLocaleDateString('vi-VN') : '-';
 const LIMIT = 10;
 
 export default function CustomersPage() {
@@ -18,7 +18,7 @@ export default function CustomersPage() {
   const [activeFilter, setActiveFilter] = useState('');
   const [confirm, setConfirm] = useState(null);
 
-  const load = useCallback(async () => {
+  async function load() {
     setLoading(true);
     try {
       const params = { page, limit: LIMIT };
@@ -30,9 +30,9 @@ export default function CustomersPage() {
       setTotal(res.data.total || 0);
     } catch { addToast('Lỗi tải người dùng', 'error'); }
     finally { setLoading(false); }
-  }, [page, search, roleFilter, activeFilter]);
+  }
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [page, search, roleFilter, activeFilter]);
 
   const handleToggle = async () => {
     try { await userAPI.toggle(confirm); addToast('Cập nhật trạng thái thành công'); setConfirm(null); load(); }
@@ -82,7 +82,7 @@ export default function CustomersPage() {
                         <span className="slider"/>
                       </label>
                     </td>
-                    <td>{fmtDate(u.createdDate)}</td>
+                    <td>{formatDate(u.createdDate)}</td>
                     <td>
                       <button className="btn btn-sm" onClick={() => setConfirm(u.userId)}>{u.isActive ? 'Khóa' : 'Mở khóa'}</button>
                     </td>

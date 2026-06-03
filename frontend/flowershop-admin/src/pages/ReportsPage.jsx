@@ -1,21 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { IMG_URL, reportAPI } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { reportAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
-
-const fmt    = n => new Intl.NumberFormat('vi-VN').format(n || 0);
-const fmtVND = n => fmt(n) + 'đ';
+import { formatCurrency, formatNumber, imageSrc } from '../utils/format';
 
 const PIE_COLORS = ['#c84b6b', '#3b82f6', '#22c55e', '#f97316', '#8b5cf6'];
-
-const imageSrc = (url) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  return IMG_URL + url;
-};
 
 export default function ReportsPage() {
   const { addToast } = useAdmin();
@@ -25,7 +17,7 @@ export default function ReportsPage() {
   const [orderStats,setOrderStats]= useState(null);
   const [loading,   setLoading]   = useState(true);
 
-  const load = useCallback(async () => {
+  async function load() {
     setLoading(true);
     try {
       const [r, t, o] = await Promise.all([
@@ -38,9 +30,9 @@ export default function ReportsPage() {
       setOrderStats(o.data|| null);
     } catch { addToast('Lỗi tải báo cáo', 'error'); }
     finally { setLoading(false); }
-  }, [year, addToast]);
+  }
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [year]);
 
   const totalRevenue = revenue.reduce((s, r) => s + (r.revenue || 0), 0);
   const totalOrders  = revenue.reduce((s, r) => s + (r.orders  || 0), 0);
@@ -73,10 +65,10 @@ export default function ReportsPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginBottom: 24 }}>
         {[
-          { label: `Tổng doanh thu ${year}`,  value: fmtVND(totalRevenue),  icon: 'DT', bg: 'linear-gradient(135deg,#c84b6b,#8b2d47)' },
-          { label: `Tổng đơn hàng ${year}`,   value: fmt(totalOrders),       icon: 'DH', bg: 'linear-gradient(135deg,#3b82f6,#1e40af)' },
+          { label: `Tổng doanh thu ${year}`,  value: formatCurrency(totalRevenue),  icon: 'DT', bg: 'linear-gradient(135deg,#c84b6b,#8b2d47)' },
+          { label: `Tổng đơn hàng ${year}`,   value: formatNumber(totalOrders),       icon: 'DH', bg: 'linear-gradient(135deg,#3b82f6,#1e40af)' },
           { label: 'Tháng doanh thu cao nhất', value: bestMonth ? `T${bestMonth.month}` : '-', icon: 'T', bg: 'linear-gradient(135deg,#f59e0b,#b45309)' },
-          { label: 'Doanh thu tháng tốt nhất', value: bestMonth ? fmtVND(bestMonth.revenue) : '-', icon: 'DT', bg: 'linear-gradient(135deg,#22c55e,#15803d)' },
+          { label: 'Doanh thu tháng tốt nhất', value: bestMonth ? formatCurrency(bestMonth.revenue) : '-', icon: 'DT', bg: 'linear-gradient(135deg,#22c55e,#15803d)' },
         ].map(s => (
           <div key={s.label} className="stat-card" style={{ background: s.bg }}>
             <div className="stat-icon">{s.icon}</div>
@@ -101,7 +93,7 @@ export default function ReportsPage() {
                 <YAxis yAxisId="left" tickFormatter={v => (v / 1000000).toFixed(0) + 'M'} tick={{ fontSize: 11 }} width={52}/>
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} width={36}/>
                 <Tooltip
-                  formatter={(v, name) => name === 'revenue' ? fmtVND(v) : fmt(v)}
+                  formatter={(v, name) => name === 'revenue' ? formatCurrency(v) : formatNumber(v)}
                   labelFormatter={l => `Tháng ${l} / ${year}`}
                 />
                 <Legend formatter={v => v === 'revenue' ? 'Doanh thu' : 'Số đơn'}/>
@@ -141,8 +133,8 @@ export default function ReportsPage() {
                       </div>
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--muted)' }}>{p.categoryName || '—'}</td>
-                    <td style={{ fontWeight: 700, textAlign: 'center' }}>{fmt(p.soldQuantity)}</td>
-                    <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{fmtVND(p.totalRevenue)}</td>
+                    <td style={{ fontWeight: 700, textAlign: 'center' }}>{formatNumber(p.soldQuantity)}</td>
+                    <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatCurrency(p.totalRevenue)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -162,7 +154,7 @@ export default function ReportsPage() {
                     <Pie data={orderPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false}>
                       {orderPieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]}/>)}
                     </Pie>
-                    <Tooltip formatter={v => fmt(v) + ' đơn'}/>
+                    <Tooltip formatter={v => `${formatNumber(v)} đơn`}/>
                   </PieChart>
                 </ResponsiveContainer>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
@@ -172,7 +164,7 @@ export default function ReportsPage() {
                         <div style={{ width: 10, height: 10, borderRadius: 2, background: PIE_COLORS[i % PIE_COLORS.length], flexShrink: 0 }}/>
                         <span>{d.name}</span>
                       </div>
-                      <span style={{ fontWeight: 700 }}>{fmt(d.value)}</span>
+                      <span style={{ fontWeight: 700 }}>{formatNumber(d.value)}</span>
                     </div>
                   ))}
                 </div>
@@ -191,7 +183,7 @@ export default function ReportsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
                 <XAxis dataKey="month" tickFormatter={m => `T${m}`} tick={{ fontSize: 12 }}/>
                 <YAxis tickFormatter={v => (v / 1000000).toFixed(0) + 'M'} tick={{ fontSize: 11 }} width={48}/>
-                <Tooltip formatter={v => fmtVND(v)} labelFormatter={l => `Tháng ${l}`}/>
+                <Tooltip formatter={v => formatCurrency(v)} labelFormatter={l => `Tháng ${l}`}/>
                 <Line type="monotone" dataKey="revenue" stroke="#c84b6b" strokeWidth={2.5} dot={{ fill: '#c84b6b', r: 4 }} activeDot={{ r: 6 }}/>
               </LineChart>
             </ResponsiveContainer>

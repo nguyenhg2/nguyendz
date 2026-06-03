@@ -29,15 +29,15 @@ namespace FlowerShop.Controllers.Admin
             var totalCustomers = await _context.Users.CountAsync(u => u.Role == "Customer");
 
             var totalRevenue = await _context.Orders
-                .Where(o => o.Status == "Hoàn thành")
+                .Where(o => o.Status == AdminOrderStatus.Completed)
                 .SumAsync(o => o.TotalAmount ?? 0);
 
             var todayRevenue = await _context.Orders
-                .Where(o => o.Status == "Hoàn thành" && o.OrderDate >= today)
+                .Where(o => o.Status == AdminOrderStatus.Completed && o.OrderDate >= today)
                 .SumAsync(o => o.TotalAmount ?? 0);
 
             var monthRevenue = await _context.Orders
-                .Where(o => o.Status == "Hoàn thành" && o.OrderDate >= startOfMonth)
+                .Where(o => o.Status == AdminOrderStatus.Completed && o.OrderDate >= startOfMonth)
                 .SumAsync(o => o.TotalAmount ?? 0);
 
             return Ok(new
@@ -65,6 +65,10 @@ namespace FlowerShop.Controllers.Admin
                     o.OrderDate,
                     o.TotalAmount,
                     o.Status,
+                    o.ReceiverName,
+                    o.ReceiverPhone,
+                    o.ReceiverAddress,
+                    o.PaymentMethod,
                     CustomerName = o.ReceiverName ?? (o.User != null ? o.User.FullName : "")
                 })
                 .ToListAsync();
@@ -75,24 +79,34 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet("revenue-chart")]
         public async Task<IActionResult> GetRevenueChart()
         {
-            var last6Months = Enumerable.Range(0, 6)
+            var months = Enumerable.Range(0, 6)
                 .Select(i => DateTime.Today.AddMonths(-i))
                 .Select(d => new { d.Year, d.Month })
-                .Reverse();
+                .Reverse()
+                .ToList();
+            var startMonth = new DateTime(months[0].Year, months[0].Month, 1);
 
-            var data = new List<object>();
+            var revenueByMonth = await _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == AdminOrderStatus.Completed
+                            && o.OrderDate.HasValue
+                            && o.OrderDate.Value >= startMonth)
+                .GroupBy(o => new { o.OrderDate!.Value.Year, o.OrderDate!.Value.Month })
+                .Select(g => new
+                {
+                    g.Key.Year,
+                    g.Key.Month,
+                    Revenue = g.Sum(o => o.TotalAmount ?? 0)
+                })
+                .ToListAsync();
 
-            foreach (var m in last6Months)
+            var data = months.Select(m => new
             {
-                var revenue = await _context.Orders
-                    .Where(o => o.Status == "Hoàn thành" &&
-                                o.OrderDate.HasValue &&
-                                o.OrderDate.Value.Year == m.Year &&
-                                o.OrderDate.Value.Month == m.Month)
-                    .SumAsync(o => o.TotalAmount ?? 0);
-
-                data.Add(new { month = $"{m.Month}/{m.Year}", revenue });
-            }
+                month = $"{m.Month}/{m.Year}",
+                revenue = revenueByMonth
+                    .FirstOrDefault(x => x.Year == m.Year && x.Month == m.Month)
+                    ?.Revenue ?? 0
+            });
 
             return Ok(data);
         }

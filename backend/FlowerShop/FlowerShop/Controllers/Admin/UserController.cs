@@ -35,10 +35,13 @@ namespace FlowerShop.Controllers.Admin
                 q = q.Where(u => u.IsActive == f.IsActive);
 
             var total = await q.CountAsync();
-            var items = await q.OrderByDescending(u => u.CreatedDate)
-                .Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit).ToListAsync();
+            var users = await q.OrderByDescending(u => u.CreatedDate)
+                .Skip(PagingHelper.Skip(paging.Page, paging.Limit))
+                .Take(paging.Limit)
+                .ToListAsync();
+            var items = users.Select(ToListDto).ToList();
 
-            return Ok(new { total, items });
+            return Ok(PagingHelper.Result(total, items, paging.Page, paging.Limit));
         }
 
         [HttpGet("{id}")]
@@ -46,8 +49,7 @@ namespace FlowerShop.Controllers.Admin
         {
             var u = await _context.Users.AsNoTracking().Include(x => x.Orders).FirstOrDefaultAsync(x => x.UserId == id);
             if (u == null) return NotFound();
-            u.PasswordHash = "";
-            return Ok(u);
+            return Ok(ToDetailDto(u));
         }
 
         [HttpPut("{id}")]
@@ -55,9 +57,16 @@ namespace FlowerShop.Controllers.Admin
         {
             var u = await _context.Users.FindAsync(id);
             if (u == null) return NotFound();
-            u.FullName = data.FullName;
-            u.Phone = data.Phone;
-            u.Address = data.Address;
+
+            if (string.IsNullOrWhiteSpace(data.FullName))
+                return BadRequest(new { message = "Họ tên không được để trống" });
+
+            if (data.Role != "Admin" && data.Role != "Customer")
+                return BadRequest(new { message = "Vai trò không hợp lệ" });
+
+            u.FullName = data.FullName.Trim();
+            u.Phone = data.Phone?.Trim();
+            u.Address = data.Address?.Trim();
             u.Role = data.Role;
             u.IsActive = data.IsActive;
             await _context.SaveChangesAsync();
@@ -72,6 +81,37 @@ namespace FlowerShop.Controllers.Admin
             u.IsActive = !u.IsActive;
             await _context.SaveChangesAsync();
             return Ok(new { id = u.UserId, isActive = u.IsActive });
+        }
+
+        private static object ToListDto(FlowerShop.Data.User user)
+        {
+            return new
+            {
+                user.UserId,
+                user.FullName,
+                user.Email,
+                user.Phone,
+                user.Role,
+                user.IsActive,
+                user.CreatedDate
+            };
+        }
+
+        private static object ToDetailDto(FlowerShop.Data.User user)
+        {
+            return new
+            {
+                user.UserId,
+                user.FullName,
+                user.Email,
+                user.Phone,
+                user.Address,
+                user.Avatar,
+                user.Role,
+                user.IsActive,
+                user.CreatedDate,
+                totalOrders = user.Orders.Count
+            };
         }
     }
 

@@ -1,15 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { productAPI, categoryAPI, IMG_URL } from '../services/api';
+import React, { useState, useEffect, useMemo } from 'react';
+import { productAPI, categoryAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
+import { formatCurrency, imageSrc, readPagedResponse } from '../utils/format';
 
-const fmtVND = n => new Intl.NumberFormat('vi-VN').format(n || 0) + 'đ';
-const imgSrc = (url) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  return IMG_URL + url;
-};
+const LIMIT = 10;
 
 export default function ProductsPage() {
   const { addToast } = useAdmin();
@@ -33,7 +29,6 @@ export default function ProductsPage() {
   const [imgFiles, setImgFiles] = useState([]);
   const [mainIdx, setMainIdx] = useState(0);
   const [existingImages, setExistingImages] = useState([]);
-  const LIMIT = 10;
   const filePreviews = useMemo(
     () => imgFiles.map(file => ({ file, url: URL.createObjectURL(file) })),
     [imgFiles]
@@ -51,7 +46,7 @@ export default function ProductsPage() {
   const isProductLockedByCategory = (product) => getProductCategory(product)?.isActive === false;
   const isCategoryLocked = form.categoryId ? categoryMap.get(String(form.categoryId))?.isActive === false : false;
 
-  const load = useCallback(async () => {
+  async function load() {
     setLoading(true);
     try {
       const params = { page, limit: LIMIT, includeInactive: true };
@@ -63,13 +58,14 @@ export default function ProductsPage() {
       if (maxPrice) params.maxPrice = maxPrice;
       if (sortBy) params.sortBy = sortBy;
       const res = await productAPI.getAll(params);
-      setList(res.data.items || []);
-      setTotal(res.data.total || 0);
+      const { items, total } = readPagedResponse(res.data, LIMIT);
+      setList(items);
+      setTotal(total);
     } catch { addToast('Lỗi tải sản phẩm', 'error'); }
     finally { setLoading(false); }
-  }, [page, search, catFilter, activeFilter, featuredFilter, minPrice, maxPrice, sortBy]);
+  }
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [page, search, catFilter, activeFilter, featuredFilter, minPrice, maxPrice, sortBy]);
   useEffect(() => { categoryAPI.getAll({ limit: 100, includeInactive: true }).then(r => setCats(r.data.items || r.data || [])); }, []);
   useEffect(() => () => filePreviews.forEach(p => URL.revokeObjectURL(p.url)), [filePreviews]);
 
@@ -191,7 +187,7 @@ export default function ProductsPage() {
                     <td>#{p.productId}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {p.imageUrl && <img src={imgSrc(p.imageUrl)} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }}/>}
+                        {p.imageUrl && <img src={imageSrc(p.imageUrl)} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }}/>}
                         <span style={{ fontWeight: 600 }}>{p.productName}</span>
                       </div>
                     </td>
@@ -199,8 +195,8 @@ export default function ProductsPage() {
                       <div>{getProductCategory(p)?.categoryName || '-'}</div>
                       {isProductLockedByCategory(p) && <div className="text-muted" style={{ fontSize: 11 }}>Danh mục đã ẩn</div>}
                     </td>
-                    <td>{fmtVND(p.price)}</td>
-                    <td>{p.discountPrice ? fmtVND(p.discountPrice) : '-'}</td>
+                    <td>{formatCurrency(p.price)}</td>
+                    <td>{p.discountPrice ? formatCurrency(p.discountPrice) : '-'}</td>
                     <td>{p.stockQuantity}</td>
                     <td>{p.soldQuantity}</td>
                     <td>
@@ -268,7 +264,7 @@ export default function ProductsPage() {
                         <div key={img.id} style={{ width: 86 }}>
                           <button type="button" onClick={() => setMainExistingImage(img.id)}
                             style={{ width: 86, height: 86, border: img.isMain ? '3px solid #be3455' : '1px solid #d1d5db', borderRadius: 8, background: '#fff', padding: 2, cursor: 'pointer', overflow: 'hidden' }}>
-                            <img src={imgSrc(img.imageUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}/>
+                            <img src={imageSrc(img.imageUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}/>
                           </button>
                           <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 4 }}>
                             <span style={{ flex: 1, fontSize: 10, fontWeight: 700, color: img.isMain ? '#be3455' : '#6b7280' }}>{img.isMain ? 'Ảnh chính' : 'Chọn chính'}</span>

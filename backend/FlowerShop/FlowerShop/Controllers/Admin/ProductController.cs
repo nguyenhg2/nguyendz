@@ -30,8 +30,12 @@ namespace FlowerShop.Controllers.Admin
             q = ApplySort(q, f.SortBy);
 
             var total = await q.CountAsync();
-            var items = await q.Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit).ToListAsync();
-            return Ok(new { total, items });
+            var items = await q
+                .Skip(PagingHelper.Skip(paging.Page, paging.Limit))
+                .Take(paging.Limit)
+                .ToListAsync();
+
+            return Ok(PagingHelper.Result(total, items, paging.Page, paging.Limit));
         }
 
         [HttpGet("{id}")]
@@ -103,6 +107,16 @@ namespace FlowerShop.Controllers.Admin
         {
             var p = await _context.Products.FindAsync(id);
             if (p == null) return NotFound();
+
+            if (p.IsActive != true)
+            {
+                var categoryIsActive = await _context.Categories
+                    .AnyAsync(c => c.CategoryId == p.CategoryId && c.IsActive == true);
+
+                if (!categoryIsActive)
+                    return BadRequest(new { message = "Danh mục đang ẩn nên không thể hiện sản phẩm" });
+            }
+
             p.IsActive = !p.IsActive;
             await _context.SaveChangesAsync();
             return Ok(new { id = p.ProductId, isActive = p.IsActive });
@@ -114,16 +128,22 @@ namespace FlowerShop.Controllers.Admin
             var p = await _context.Products.FindAsync(id);
             if (p == null) return NotFound();
             if (files == null || files.Count == 0) return BadRequest("Không có file");
-
-            var folder = Path.Combine(_env.WebRootPath, "uploads/products");
-            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+            if (mainIndex < 0 || mainIndex >= files.Count) mainIndex = 0;
 
             var existingImages = await _context.ProductImages.Where(x => x.ProductId == id).ToListAsync();
             foreach (var existing in existingImages) existing.IsMain = false;
 
             for (int i = 0; i < files.Count; i++)
             {
-                var imageUrl = await SaveImage(files[i], folder);
+                string imageUrl;
+                try
+                {
+                    imageUrl = await UploadHelper.SaveImageAsync(_env, files[i], "products");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return BadRequest(new { message = ex.Message });
+                }
 
                 var img = new ProductImage
                 {
@@ -147,10 +167,17 @@ namespace FlowerShop.Controllers.Admin
             var img = await _context.ProductImages.FindAsync(imageId);
             if (img == null || img.ProductId != id) return NotFound();
 
+            var wasMainImage = img.IsMain == true;
             DeleteFile(img.ImageUrl);
 
             _context.ProductImages.Remove(img);
             await _context.SaveChangesAsync();
+
+            if (wasMainImage)
+            {
+                await SetFirstImageAsMain(id);
+            }
+
             return Ok(new { message = "Xóa ảnh thành công" });
         }
 
@@ -158,24 +185,44 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> SetMainImage(int id, int imageId)
         {
             var images = await _context.ProductImages.Where(x => x.ProductId == id).ToListAsync();
+            var main = images.FirstOrDefault(x => x.Id == imageId);
+            if (main == null) return NotFound();
+
             foreach (var img in images) img.IsMain = (img.Id == imageId);
 
-            var main = images.FirstOrDefault(x => x.Id == imageId);
-            if (main != null)
-            {
-                var p = await _context.Products.FindAsync(id);
-                if (p != null) p.ImageUrl = main.ImageUrl;
-            }
+            var p = await _context.Products.FindAsync(id);
+            if (p != null) p.ImageUrl = main.ImageUrl;
 
             await _context.SaveChangesAsync();
             return Ok(images);
         }
 
+        private async Task SetFirstImageAsMain(int productId)
+        {
+            var nextImage = await _context.ProductImages
+                .Where(x => x.ProductId == productId)
+                .OrderBy(x => x.Id)
+                .FirstOrDefaultAsync();
+            var product = await _context.Products.FindAsync(productId);
+
+            if (product == null) return;
+
+            if (nextImage == null)
+            {
+                product.ImageUrl = null;
+            }
+            else
+            {
+                nextImage.IsMain = true;
+                product.ImageUrl = nextImage.ImageUrl;
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
         private void DeleteFile(string? url)
         {
-            if (string.IsNullOrEmpty(url) || url.StartsWith("http")) return;
-            var path = Path.Combine(_env.WebRootPath, url.TrimStart('/'));
-            if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+            UploadHelper.DeleteLocalFile(_env, url);
         }
 
         private static IQueryable<Product> ApplyFilters(IQueryable<Product> q, ProductParams f)
@@ -219,17 +266,6 @@ namespace FlowerShop.Controllers.Admin
             product.IsFeatured = data.IsFeatured;
             product.ImageUrl = data.ImageUrl;
             product.UpdatedDate = DateTime.Now;
-        }
-
-        private static async Task<string> SaveImage(IFormFile file, string folder)
-        {
-            var fileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
-            var path = Path.Combine(folder, fileName);
-
-            using var stream = new FileStream(path, FileMode.Create);
-            await file.CopyToAsync(stream);
-
-            return "/uploads/products/" + fileName;
         }
 
         private static string? ValidateProduct(Product product)

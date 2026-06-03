@@ -10,5 +10,21 @@ namespace FlowerShop.Common
 
             return (page, limit);
         }
+
+        public static int Skip(int page, int limit)
+        {
+            return (page - 1) * limit;
+        }
+
+        public static object Result<T>(int total, IEnumerable<T> items, int page, int limit)
+        {
+            return new
+            {
+                total,
+                totalItems = total,
+                totalPages = (int)Math.Ceiling((double)total / limit),
+                items
+            };
+        }
     }
 }

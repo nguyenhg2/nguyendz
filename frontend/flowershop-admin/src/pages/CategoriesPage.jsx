@@ -1,18 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { categoryAPI, IMG_URL } from '../services/api';
+import React, { useEffect, useState } from 'react';
+import { categoryAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
+import { imageSrc, readPagedResponse } from '../utils/format';
 
-const imgSrc = (url) => { if (!url) return ''; if (url.startsWith('http')) return url; return IMG_URL + url; };
 const LIMIT = 10;
 
 export default function CategoriesPage() {
   const { addToast } = useAdmin();
   const [list, setList] = useState([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
   const [modal, setModal] = useState(false);
@@ -22,21 +22,25 @@ export default function CategoriesPage() {
   const [saving, setSaving] = useState(false);
   const [imgFile, setImgFile] = useState(null);
 
-  const load = useCallback(async () => {
+  async function load() {
     setLoading(true);
     try {
       const params = { page, limit: LIMIT, includeInactive: true };
       if (search) params.search = search;
       if (activeFilter !== '') params.isActive = activeFilter === 'true';
-      const res = await categoryAPI.getAll(params);
-      const data = res.data;
-      setList(data.items || data || []);
-      setTotal(data.total || (data.length ? data.length : 0));
-    } catch { addToast('Lỗi tải danh mục', 'error'); }
-    finally { setLoading(false); }
-  }, [page, search, activeFilter]);
 
-  useEffect(() => { load(); }, [load]);
+      const res = await categoryAPI.getAll(params);
+      const data = readPagedResponse(res.data, LIMIT);
+      setList(data.items);
+      setTotal(data.total);
+    } catch {
+      addToast('Lỗi tải danh mục', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, [page, search, activeFilter]);
 
   const openAdd = () => {
     setForm({ categoryName: '', description: '', sortOrder: 0, isActive: true });
@@ -103,7 +107,7 @@ export default function CategoriesPage() {
                     <td>#{c.categoryId}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {c.imageUrl && <img src={imgSrc(c.imageUrl)} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4 }}/>}
+                        {c.imageUrl && <img src={imageSrc(c.imageUrl)} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4 }}/>}
                         <span style={{ fontWeight: 600 }}>{c.categoryName}</span>
                       </div>
                     </td>
@@ -141,7 +145,7 @@ export default function CategoriesPage() {
                 <label>Ảnh danh mục</label>
                 <input type="file" accept="image/*" onChange={e => setImgFile(e.target.files[0])}/>
                 {imgFile && <img src={URL.createObjectURL(imgFile)} alt="" style={{ width: 80, marginTop: 8, borderRadius: 4 }}/>}
-                {!imgFile && form.currentImage && <img src={imgSrc(form.currentImage)} alt="" style={{ width: 80, marginTop: 8, borderRadius: 4 }}/>}
+                {!imgFile && form.currentImage && <img src={imageSrc(form.currentImage)} alt="" style={{ width: 80, marginTop: 8, borderRadius: 4 }}/>}
               </div>
               <div className="form-group"><label>Thứ tự hiển thị</label><input type="number" value={form.sortOrder} onChange={e => setForm({...form, sortOrder: parseInt(e.target.value) || 0})}/></div>
               <label><input type="checkbox" checked={!!form.isActive} onChange={e => setForm({...form, isActive: e.target.checked})}/> Hiển thị</label>

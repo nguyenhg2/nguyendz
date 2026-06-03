@@ -36,9 +36,11 @@ namespace FlowerShop.Controllers.Admin
 
             var total = await q.CountAsync();
             var items = await q.OrderByDescending(c => c.CreatedDate)
-                .Skip((page - 1) * limit).Take(limit).ToListAsync();
+                .Skip(PagingHelper.Skip(page, limit))
+                .Take(limit)
+                .ToListAsync();
 
-            return Ok(new { total, items });
+            return Ok(PagingHelper.Result(total, items, page, limit));
         }
 
         [HttpGet("{id}")]

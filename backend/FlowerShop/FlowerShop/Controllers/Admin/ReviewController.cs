@@ -39,14 +39,15 @@ namespace FlowerShop.Controllers.Admin
 
             var total = await q.CountAsync();
             var items = await q.OrderByDescending(r => r.CreatedDate)
-                .Skip((paging.Page - 1) * paging.Limit).Take(paging.Limit)
+                .Skip(PagingHelper.Skip(paging.Page, paging.Limit))
+                .Take(paging.Limit)
                 .Select(r => new {
                     r.ReviewId, r.ProductId, r.UserId, r.Rating, r.Comment, r.CreatedDate,
                     productName = r.Product != null ? r.Product.ProductName : "",
                     userName = r.User != null ? r.User.FullName : ""
                 }).ToListAsync();
 
-            return Ok(new { total, items });
+            return Ok(PagingHelper.Result(total, items, paging.Page, paging.Limit));
         }
 
         [HttpDelete("{id}")]

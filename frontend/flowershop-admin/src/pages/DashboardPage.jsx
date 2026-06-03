@@ -2,17 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { dashboardAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const fmt = n => new Intl.NumberFormat('vi-VN').format(n || 0);
-const fmtVND = n => fmt(n) + 'đ';
-
-const STATUS_BADGE = {
-  'Chờ xử lý':  'badge-pending',
-  'Đã xác nhận':'badge-confirmed',
-  'Đang giao':  'badge-shipping',
-  'Hoàn thành': 'badge-done',
-  'Đã hủy':     'badge-cancelled',
-};
+import { ORDER_STATUS_BADGE, orderStatusLabel } from '../constants/orderStatus';
+import { formatCurrency, formatDate, formatNumber } from '../utils/format';
 
 const paymentLabel = (method) => {
   return String(method || '').toLowerCase() === 'cod' ? 'COD' : 'Thanh toán';
@@ -50,10 +41,10 @@ export default function DashboardPage() {
   if (loading) return <div className="spinner"/>;
 
   const STAT_CARDS = [
-    { label:'Doanh thu hôm nay',  value: fmtVND(stats?.todayRevenue),   bg:'linear-gradient(135deg,#c84b6b,#8b2d47)',  sub:`Tháng này: ${fmtVND(stats?.monthRevenue)}` },
-    { label:'Đơn hàng hôm nay',   value: fmt(stats?.todayOrders),        bg:'linear-gradient(135deg,#3b82f6,#1e40af)',  sub:`Tổng: ${fmt(stats?.totalOrders)} đơn` },
-    { label:'Tổng sản phẩm',      value: fmt(stats?.totalProducts),      bg:'linear-gradient(135deg,#22c55e,#15803d)',  sub:'Sản phẩm đang bán' },
-    { label:'Khách hàng',         value: fmt(stats?.totalCustomers),      bg:'linear-gradient(135deg,#f97316,#c2410c)',  sub:'Đã đăng ký' },
+    { label:'Doanh thu hôm nay',  value: formatCurrency(stats?.todayRevenue),   bg:'linear-gradient(135deg,#c84b6b,#8b2d47)',  sub:`Tháng này: ${formatCurrency(stats?.monthRevenue)}` },
+    { label:'Đơn hàng hôm nay',   value: formatNumber(stats?.todayOrders),        bg:'linear-gradient(135deg,#3b82f6,#1e40af)',  sub:`Tổng: ${formatNumber(stats?.totalOrders)} đơn` },
+    { label:'Tổng sản phẩm',      value: formatNumber(stats?.totalProducts),      bg:'linear-gradient(135deg,#22c55e,#15803d)',  sub:'Sản phẩm đang bán' },
+    { label:'Khách hàng',         value: formatNumber(stats?.totalCustomers),      bg:'linear-gradient(135deg,#f97316,#c2410c)',  sub:'Đã đăng ký' },
   ];
 
   return (
@@ -78,7 +69,7 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
                   <XAxis dataKey="month" tick={{ fontSize: 11 }}/>
                   <YAxis tick={{ fontSize: 11 }} tickFormatter={v => (v/1000000).toFixed(0)+'M'}/>
-                  <Tooltip formatter={v => fmtVND(v)} labelFormatter={l => `Tháng ${l}`}/>
+                  <Tooltip formatter={v => formatCurrency(v)} labelFormatter={l => `Tháng ${l}`}/>
                   <Bar dataKey="revenue" fill="#c84b6b" radius={[4,4,0,0]}/>
                 </BarChart>
               </ResponsiveContainer>
@@ -96,7 +87,7 @@ export default function DashboardPage() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.productName}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>Đã bán: {fmt(p.soldQuantity)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>Đã bán: {formatNumber(p.soldQuantity)}</div>
                 </div>
               </div>
             ))}
@@ -134,9 +125,9 @@ export default function DashboardPage() {
                   <td style={{ color: 'var(--muted)' }}>{o.receiverPhone}</td>
                   <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12 }}>{o.receiverAddress}</td>
                   <td><span style={{ fontSize: 12 }}>{paymentLabel(o.paymentMethod)}</span></td>
-                  <td><span style={{ fontWeight: 700, color: 'var(--primary)' }}>{fmtVND(o.totalAmount)}</span></td>
-                  <td><span className={`badge ${STATUS_BADGE[o.status] || 'badge-pending'}`}>{o.status}</span></td>
-                  <td style={{ color: 'var(--muted)', fontSize: 12 }}>{new Date(o.orderDate).toLocaleDateString('vi-VN')}</td>
+                  <td><span style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatCurrency(o.totalAmount)}</span></td>
+                  <td><span className={`badge ${ORDER_STATUS_BADGE[orderStatusLabel(o.status)] || 'badge-pending'}`}>{orderStatusLabel(o.status)}</span></td>
+                  <td style={{ color: 'var(--muted)', fontSize: 12 }}>{formatDate(o.orderDate)}</td>
                 </tr>
               ))}
             </tbody>

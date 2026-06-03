@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { contactAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
+import { formatDate, readPagedResponse } from '../utils/format';
 
-const fmtDate = d => d ? new Date(d).toLocaleDateString('vi-VN') : '-';
 const LIMIT = 10;
 
 export default function ContactsPage() {
@@ -18,21 +18,21 @@ export default function ContactsPage() {
   const [detail, setDetail] = useState(null);
   const [confirm, setConfirm] = useState(null);
 
-  const load = useCallback(async () => {
+  async function load() {
     setLoading(true);
     try {
       const params = { page, limit: LIMIT };
       if (search) params.search = search;
       if (readFilter !== '') params.isRead = readFilter === 'true';
       const res = await contactAPI.getAll(params);
-      const data = res.data;
-      setList(data.items || data || []);
-      setTotal(data.total || (data.length ? data.length : 0));
+      const { items, total } = readPagedResponse(res.data, LIMIT);
+      setList(items);
+      setTotal(total);
     } catch { addToast('Lỗi tải liên hệ', 'error'); }
     finally { setLoading(false); }
-  }, [page, search, readFilter]);
+  }
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [page, search, readFilter]);
 
   const openDetail = async (id) => {
     try {
@@ -79,7 +79,7 @@ export default function ContactsPage() {
                     <td>{c.email}</td>
                     <td>{c.phone || '-'}</td>
                     <td>{c.subject || '-'}</td>
-                    <td>{fmtDate(c.createdDate)}</td>
+                    <td>{formatDate(c.createdDate)}</td>
                     <td><span className={`badge ${c.isRead ? 'badge-success' : 'badge-warning'}`}>{c.isRead ? 'Đã đọc' : 'Chưa đọc'}</span></td>
                     <td>
                       <div className="btn-group">
@@ -105,7 +105,7 @@ export default function ContactsPage() {
               <p><strong>Email:</strong> {detail.email}</p>
               <p><strong>SĐT:</strong> {detail.phone || 'Không có'}</p>
               <p><strong>Chủ đề:</strong> {detail.subject || 'Không có'}</p>
-              <p><strong>Ngày gửi:</strong> {fmtDate(detail.createdDate)}</p>
+              <p><strong>Ngày gửi:</strong> {formatDate(detail.createdDate)}</p>
               <p><strong>Nội dung:</strong></p>
               <div style={{ background: '#f9fafb', padding: 12, borderRadius: 8, whiteSpace: 'pre-wrap' }}>{detail.message || 'Không có nội dung'}</div>
             </div>
