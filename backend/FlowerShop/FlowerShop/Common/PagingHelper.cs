@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace FlowerShop.Common
 {
     public static class PagingHelper
@@ -24,6 +26,20 @@ namespace FlowerShop.Common
                 totalPages = (int)Math.Ceiling((double)total / limit),
                 items
             };
+        }
+
+        public static async Task<object> PageAsync<T>(IQueryable<T> query, int page, int limit,
+            int defaultLimit = 10, int maxLimit = 100)
+        {
+            (page, limit) = Normalize(page, limit, defaultLimit, maxLimit);
+
+            var total = await query.CountAsync();
+            var items = await query
+                .Skip(Skip(page, limit))
+                .Take(limit)
+                .ToListAsync();
+
+            return Result(total, items, page, limit);
         }
     }
 }

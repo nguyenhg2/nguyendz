@@ -21,8 +21,7 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] ReviewSearchParams f)
         {
-            var paging = PagingHelper.Normalize(f.Page, f.Limit);
-            var q = _context.Reviews.AsNoTracking().Include(r => r.Product).Include(r => r.User).AsQueryable();
+            var q = _context.Reviews.AsNoTracking().AsQueryable();
 
             if (f.MinRating.HasValue)
                 q = q.Where(r => r.Rating >= f.MinRating);
@@ -33,17 +32,14 @@ namespace FlowerShop.Controllers.Admin
                     (r.Product != null && r.Product.ProductName.Contains(f.Search))
                     || (r.User != null && r.User.FullName.Contains(f.Search)));
 
-            var total = await q.CountAsync();
-            var items = await q.OrderByDescending(r => r.CreatedDate)
-                .Skip(PagingHelper.Skip(paging.Page, paging.Limit))
-                .Take(paging.Limit)
+            var items = q.OrderByDescending(r => r.CreatedDate)
                 .Select(r => new {
                     r.ReviewId, r.ProductId, r.UserId, r.Rating, r.Comment, r.CreatedDate,
-                    productName = r.Product != null ? r.Product.ProductName : "",
-                    userName = r.User != null ? r.User.FullName : ""
-                }).ToListAsync();
+                    productName = r.Product != null ? r.Product.ProductName : string.Empty,
+                    userName = r.User != null ? r.User.FullName : string.Empty
+                });
 
-            return Ok(PagingHelper.Result(total, items, paging.Page, paging.Limit));
+            return Ok(await PagingHelper.PageAsync(items, f.Page, f.Limit));
         }
 
         [HttpDelete("{id}")]

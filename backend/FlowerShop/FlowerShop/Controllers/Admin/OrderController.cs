@@ -21,14 +21,8 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] OrderSearchParams f)
         {
-            var paging = PagingHelper.Normalize(f.Page, f.Limit);
-            var query = BuildOrderQuery(f);
-
-            var total = await query.CountAsync();
-            var orders = await query
+            var orders = BuildOrderQuery(f)
                 .OrderByDescending(order => order.OrderDate)
-                .Skip(PagingHelper.Skip(paging.Page, paging.Limit))
-                .Take(paging.Limit)
                 .Select(order => new AdminOrderListItemDto
                 {
                     OrderId = order.OrderId,
@@ -41,10 +35,9 @@ namespace FlowerShop.Controllers.Admin
                     ReceiverAddress = order.ReceiverAddress,
                     PaymentMethod = order.PaymentMethod,
                     Note = order.Note
-                })
-                .ToListAsync();
+                });
 
-            return Ok(PagingHelper.Result(total, orders, paging.Page, paging.Limit));
+            return Ok(await PagingHelper.PageAsync(orders, f.Page, f.Limit));
         }
 
         [HttpGet("{id}")]
@@ -103,7 +96,7 @@ namespace FlowerShop.Controllers.Admin
 
         private IQueryable<Order> BuildOrderQuery(OrderSearchParams f)
         {
-            var query = _context.Orders.AsNoTracking().Include(order => order.User).AsQueryable();
+            var query = _context.Orders.AsNoTracking().AsQueryable();
 
             var status = AdminOrderStatus.Normalize(f.Status);
             if (!string.IsNullOrWhiteSpace(status))

@@ -1,18 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { bannerAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
-import { imageSrc, readPagedResponse } from '../utils/format';
-
-const LIMIT = 10;
+import usePagedList from '../hooks/usePagedList';
+import { boolParam, imageSrc } from '../utils/format';
 
 export default function BannersPage() {
   const { addToast } = useAdmin();
-  const [list, setList] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
   const [modal, setModal] = useState(false);
@@ -21,26 +16,11 @@ export default function BannersPage() {
   const [confirm, setConfirm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [imgFile, setImgFile] = useState(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const params = { page, limit: LIMIT };
-      if (search) params.search = search;
-      if (activeFilter !== '') params.isActive = activeFilter === 'true';
-
-      const res = await bannerAPI.getAll(params);
-      const data = readPagedResponse(res.data);
-      setList(data.items);
-      setTotal(data.total);
-    } catch {
-      addToast('Lỗi tải banner', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { load(); }, [page, search, activeFilter]);
+  const { list, total, totalPages, page, setPage, loading, load } = usePagedList(
+    bannerAPI.getAll,
+    { search, isActive: boolParam(activeFilter) },
+    'Loi tai banner'
+  );
 
   const openAdd = () => {
     setForm({ title: '', sortOrder: 0, isActive: true });
@@ -126,7 +106,7 @@ export default function BannersPage() {
             </table>
           )}
         </div>
-        <Pagination current={page} total={Math.ceil(total / LIMIT)} onChange={setPage}/>
+        <Pagination current={page} total={totalPages} onChange={setPage}/>
       </div>
 
       {modal && (

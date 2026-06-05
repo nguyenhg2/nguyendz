@@ -16,6 +16,13 @@ export const imageSrc = (url) => {
 export const readPagedResponse = (data) => {
   const items = Array.isArray(data) ? data : data?.items || [];
   const total = Array.isArray(data) ? data.length : (data?.total ?? items.length);
+  const totalPages = Array.isArray(data) ? 1 : data?.totalPages;
 
-  return { items, total };
+  return { items, total, totalPages };
 };
+
+export const cleanParams = (params) => Object.fromEntries(
+  Object.entries(params).filter(([, value]) => value !== '' && value !== null && value !== undefined)
+);
+
+export const boolParam = (value) => (value === '' ? undefined : value === 'true');

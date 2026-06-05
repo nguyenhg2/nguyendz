@@ -53,22 +53,22 @@ export const dashboardAPI = {
   getTopProducts: () => api.get('/admin/dashboard/top-products'),
 };
 
+const crud = (url) => ({
+  getAll: (params) => api.get(url, { params }),
+  create: (data) => api.post(url, data),
+  update: (id, data) => api.put(`${url}/${id}`, data),
+  remove: (id) => api.delete(`${url}/${id}`),
+  toggle: (id) => api.patch(`${url}/${id}/toggle`),
+});
+
 export const categoryAPI = {
-  getAll: (params) => api.get('/admin/categories', { params }),
-  create: (data) => api.post('/admin/categories', data),
-  update: (id, data) => api.put(`/admin/categories/${id}`, data),
-  remove: (id) => api.delete(`/admin/categories/${id}`),
-  toggle: (id) => api.patch(`/admin/categories/${id}/toggle`),
+  ...crud('/admin/categories'),
   uploadImage: (id, formData) => api.post(`/admin/categories/${id}/image`, formData),
 };
 
 export const productAPI = {
-  getAll: (params) => api.get('/admin/products', { params }),
+  ...crud('/admin/products'),
   getById: (id) => api.get(`/admin/products/${id}`),
-  create: (data) => api.post('/admin/products', data),
-  update: (id, data) => api.put(`/admin/products/${id}`, data),
-  remove: (id) => api.delete(`/admin/products/${id}`),
-  toggle: (id) => api.patch(`/admin/products/${id}/toggle`),
   uploadImages: (id, formData) => api.post(`/admin/products/${id}/images`, formData),
   deleteImage: (id, imageId) => api.delete(`/admin/products/${id}/images/${imageId}`),
   setMainImage: (id, imageId) => api.patch(`/admin/products/${id}/images/${imageId}/set-main`),
@@ -92,11 +92,7 @@ export const reviewAPI = {
 };
 
 export const bannerAPI = {
-  getAll: (params) => api.get('/admin/banners', { params }),
-  create: (data) => api.post('/admin/banners', data),
-  update: (id, data) => api.put(`/admin/banners/${id}`, data),
-  remove: (id) => api.delete(`/admin/banners/${id}`),
-  toggle: (id) => api.patch(`/admin/banners/${id}/toggle`),
+  ...crud('/admin/banners'),
   uploadImage: (id, formData) => api.post(`/admin/banners/${id}/image`, formData),
 };
 

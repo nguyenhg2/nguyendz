@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAdmin } from '../context/AdminContext';
 import { orderAPI } from '../services/api';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
+import usePagedList from '../hooks/usePagedList';
 import {
   ORDER_STATUS_BADGE,
   ORDER_STATUS_OPTIONS,
@@ -13,8 +14,6 @@ import {
 } from '../constants/orderStatus';
 import { formatCurrency, formatDate, imageSrc } from '../utils/format';
 
-const LIMIT = 10;
-
 const paymentLabel = (method) => (
   String(method || '').toLowerCase() === 'cod' ? 'COD' : 'Thanh toán'
 );
@@ -24,11 +23,8 @@ const itemTotal = (item) => item.subtotal ?? (item.unitPrice || 0) * (item.quant
 
 export default function OrdersPage() {
   const { addToast } = useAdmin();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -37,33 +33,16 @@ export default function OrdersPage() {
   const [cancelId, setCancelId] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [confirmOrder, setConfirmOrder] = useState(null);
-
-  async function load(nextPage = page) {
-    setLoading(true);
-    try {
-      const params = { page: nextPage, limit: LIMIT };
-      if (search.trim()) params.search = search.trim();
-      if (statusFilter) params.status = statusFilter;
-      if (paymentFilter) params.paymentMethod = paymentFilter;
-      if (dateFrom) params.dateFrom = dateFrom;
-      if (dateTo) params.dateTo = dateTo;
-
-      const res = await orderAPI.getAll(params);
-      setOrders(res.data.items || []);
-      setTotalPages(res.data.totalPages || 1);
-    } catch {
-      addToast('Lỗi tải đơn hàng', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { load(); }, [page, statusFilter, paymentFilter, dateFrom, dateTo]);
+  const { list: orders, totalPages, page, setPage, loading, load } = usePagedList(
+    orderAPI.getAll,
+    { search: searchQuery, status: statusFilter, paymentMethod: paymentFilter, dateFrom, dateTo },
+    'Loi tai don hang'
+  );
 
   function handleSearch(e) {
     e.preventDefault();
-    if (page === 1) load(1);
-    else setPage(1);
+    setSearchQuery(search.trim());
+    setPage(1);
   }
 
   async function openDetail(id) {

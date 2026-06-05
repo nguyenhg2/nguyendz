@@ -23,19 +23,12 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] ProductParams f)
         {
-            var paging = PagingHelper.Normalize(f.Page, f.Limit);
             var q = _context.Products.AsNoTracking().Include(p => p.Category).Include(p => p.Images).AsQueryable();
 
             q = ApplyFilters(q, f);
             q = ApplySort(q, f.SortBy);
 
-            var total = await q.CountAsync();
-            var items = await q
-                .Skip(PagingHelper.Skip(paging.Page, paging.Limit))
-                .Take(paging.Limit)
-                .ToListAsync();
-
-            return Ok(PagingHelper.Result(total, items, paging.Page, paging.Limit));
+            return Ok(await PagingHelper.PageAsync(q, f.Page, f.Limit));
         }
 
         [HttpGet("{id}")]

@@ -3,17 +3,12 @@ import { productAPI, categoryAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
-import { formatCurrency, imageSrc, readPagedResponse } from '../utils/format';
-
-const LIMIT = 10;
+import usePagedList from '../hooks/usePagedList';
+import { boolParam, formatCurrency, imageSrc } from '../utils/format';
 
 export default function ProductsPage() {
   const { addToast } = useAdmin();
-  const [list, setList] = useState([]);
   const [cats, setCats] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
@@ -29,6 +24,19 @@ export default function ProductsPage() {
   const [imgFiles, setImgFiles] = useState([]);
   const [mainIdx, setMainIdx] = useState(0);
   const [existingImages, setExistingImages] = useState([]);
+  const { list, total, totalPages, page, setPage, loading, load } = usePagedList(
+    productAPI.getAll,
+    {
+      search,
+      categoryId: catFilter,
+      isActive: boolParam(activeFilter),
+      isFeatured: boolParam(featuredFilter),
+      minPrice,
+      maxPrice,
+      sortBy,
+    },
+    'Loi tai san pham'
+  );
   const filePreviews = useMemo(
     () => imgFiles.map(file => ({ file, url: URL.createObjectURL(file) })),
     [imgFiles]
@@ -46,26 +54,6 @@ export default function ProductsPage() {
   const isProductLockedByCategory = (product) => getProductCategory(product)?.isActive === false;
   const isCategoryLocked = form.categoryId ? categoryMap.get(String(form.categoryId))?.isActive === false : false;
 
-  async function load() {
-    setLoading(true);
-    try {
-      const params = { page, limit: LIMIT };
-      if (search) params.search = search;
-      if (catFilter) params.categoryId = catFilter;
-      if (activeFilter !== '') params.isActive = activeFilter === 'true';
-      if (featuredFilter !== '') params.isFeatured = featuredFilter === 'true';
-      if (minPrice) params.minPrice = minPrice;
-      if (maxPrice) params.maxPrice = maxPrice;
-      if (sortBy) params.sortBy = sortBy;
-      const res = await productAPI.getAll(params);
-      const { items, total } = readPagedResponse(res.data);
-      setList(items);
-      setTotal(total);
-    } catch { addToast('Lỗi tải sản phẩm', 'error'); }
-    finally { setLoading(false); }
-  }
-
-  useEffect(() => { load(); }, [page, search, catFilter, activeFilter, featuredFilter, minPrice, maxPrice, sortBy]);
   useEffect(() => { categoryAPI.getAll({ limit: 100 }).then(r => setCats(r.data.items || r.data || [])); }, []);
   useEffect(() => () => filePreviews.forEach(p => URL.revokeObjectURL(p.url)), [filePreviews]);
 
@@ -217,7 +205,7 @@ export default function ProductsPage() {
             </table>
           )}
         </div>
-        <Pagination current={page} total={Math.ceil(total / LIMIT)} onChange={setPage}/>
+        <Pagination current={page} total={totalPages} onChange={setPage}/>
       </div>
 
       {modal && (

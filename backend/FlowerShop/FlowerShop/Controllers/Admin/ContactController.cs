@@ -22,8 +22,6 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetAll([FromQuery] bool? isRead, [FromQuery] string? search,
             [FromQuery] int page = 1, [FromQuery] int limit = 15)
         {
-            (page, limit) = PagingHelper.Normalize(page, limit, defaultLimit: 15);
-
             var q = _context.Contacts.AsNoTracking().AsQueryable();
 
             if (isRead.HasValue)
@@ -34,13 +32,7 @@ namespace FlowerShop.Controllers.Admin
                     || (c.Email ?? "").Contains(search)
                     || (c.Subject ?? "").Contains(search));
 
-            var total = await q.CountAsync();
-            var items = await q.OrderByDescending(c => c.CreatedDate)
-                .Skip(PagingHelper.Skip(page, limit))
-                .Take(limit)
-                .ToListAsync();
-
-            return Ok(PagingHelper.Result(total, items, page, limit));
+            return Ok(await PagingHelper.PageAsync(q.OrderByDescending(c => c.CreatedDate), page, limit, defaultLimit: 15));
         }
 
         [HttpGet("{id}")]

@@ -1,38 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { userAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
-import { formatDate } from '../utils/format';
-
-const LIMIT = 10;
+import usePagedList from '../hooks/usePagedList';
+import { boolParam, formatDate } from '../utils/format';
 
 export default function CustomersPage() {
   const { addToast } = useAdmin();
-  const [list, setList] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
   const [confirm, setConfirm] = useState(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const params = { page, limit: LIMIT };
-      if (search) params.search = search;
-      if (roleFilter) params.role = roleFilter;
-      if (activeFilter !== '') params.isActive = activeFilter === 'true';
-      const res = await userAPI.getAll(params);
-      setList(res.data.items || []);
-      setTotal(res.data.total || 0);
-    } catch { addToast('Lỗi tải người dùng', 'error'); }
-    finally { setLoading(false); }
-  }
-
-  useEffect(() => { load(); }, [page, search, roleFilter, activeFilter]);
+  const { list, total, totalPages, page, setPage, loading, load } = usePagedList(
+    userAPI.getAll,
+    { search, role: roleFilter, isActive: boolParam(activeFilter) },
+    'Loi tai nguoi dung'
+  );
 
   const handleToggle = async () => {
     try { await userAPI.toggle(confirm); addToast('Cập nhật trạng thái thành công'); setConfirm(null); load(); }
@@ -92,7 +76,7 @@ export default function CustomersPage() {
             </table>
           )}
         </div>
-        <Pagination current={page} total={Math.ceil(total / LIMIT)} onChange={setPage}/>
+        <Pagination current={page} total={totalPages} onChange={setPage}/>
       </div>
 
       {confirm && <ConfirmModal title="Thay đổi trạng thái" message="Bạn có chắc chắn muốn khóa/mở khóa người dùng này?" onConfirm={handleToggle} onCancel={() => setConfirm(null)}/>}

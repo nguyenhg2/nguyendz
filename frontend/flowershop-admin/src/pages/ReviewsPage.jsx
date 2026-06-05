@@ -1,39 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { reviewAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
-import { formatDate, readPagedResponse } from '../utils/format';
-
-const LIMIT = 10;
+import usePagedList from '../hooks/usePagedList';
+import { formatDate } from '../utils/format';
 
 export default function ReviewsPage() {
   const { addToast } = useAdmin();
-  const [list, setList] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [minRating, setMinRating] = useState('');
   const [maxRating, setMaxRating] = useState('');
   const [confirm, setConfirm] = useState(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const params = { page, limit: LIMIT };
-      if (search) params.search = search;
-      if (minRating) params.minRating = minRating;
-      if (maxRating) params.maxRating = maxRating;
-      const res = await reviewAPI.getAll(params);
-      const { items, total } = readPagedResponse(res.data);
-      setList(items);
-      setTotal(total);
-    } catch { addToast('Lỗi tải đánh giá', 'error'); }
-    finally { setLoading(false); }
-  }
-
-  useEffect(() => { load(); }, [page, search, minRating, maxRating]);
+  const { list, total, totalPages, page, setPage, loading, load } = usePagedList(
+    reviewAPI.getAll,
+    { search, minRating, maxRating },
+    'Loi tai danh gia'
+  );
 
   const handleDelete = async () => {
     try { await reviewAPI.remove(confirm); addToast('Đã xóa đánh giá'); setConfirm(null); load(); }
@@ -93,7 +76,7 @@ export default function ReviewsPage() {
             </table>
           )}
         </div>
-        <Pagination current={page} total={Math.ceil(total / LIMIT)} onChange={setPage}/>
+        <Pagination current={page} total={totalPages} onChange={setPage}/>
       </div>
 
       {confirm && <ConfirmModal title="Xóa đánh giá" message="Bạn có chắc chắn muốn xóa đánh giá này?" onConfirm={handleDelete} onCancel={() => setConfirm(null)}/>}

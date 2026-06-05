@@ -21,7 +21,6 @@ namespace FlowerShop.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] UserSearchParams f)
         {
-            var paging = PagingHelper.Normalize(f.Page, f.Limit);
             var q = _context.Users.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrEmpty(f.Search))
@@ -34,14 +33,18 @@ namespace FlowerShop.Controllers.Admin
             if (f.IsActive.HasValue)
                 q = q.Where(u => u.IsActive == f.IsActive);
 
-            var total = await q.CountAsync();
-            var users = await q.OrderByDescending(u => u.CreatedDate)
-                .Skip(PagingHelper.Skip(paging.Page, paging.Limit))
-                .Take(paging.Limit)
-                .ToListAsync();
-            var items = users.Select(ToListDto).ToList();
+            var items = q.OrderByDescending(u => u.CreatedDate)
+                .Select(u => new {
+                    u.UserId,
+                    u.FullName,
+                    u.Email,
+                    u.Phone,
+                    u.Role,
+                    u.IsActive,
+                    u.CreatedDate
+                });
 
-            return Ok(PagingHelper.Result(total, items, paging.Page, paging.Limit));
+            return Ok(await PagingHelper.PageAsync(items, f.Page, f.Limit));
         }
 
         [HttpPatch("{id}/toggle")]
@@ -52,20 +55,6 @@ namespace FlowerShop.Controllers.Admin
             u.IsActive = !u.IsActive;
             await _context.SaveChangesAsync();
             return Ok(new { id = u.UserId, isActive = u.IsActive });
-        }
-
-        private static object ToListDto(FlowerShop.Data.User user)
-        {
-            return new
-            {
-                user.UserId,
-                user.FullName,
-                user.Email,
-                user.Phone,
-                user.Role,
-                user.IsActive,
-                user.CreatedDate
-            };
         }
 
     }

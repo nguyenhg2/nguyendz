@@ -24,8 +24,6 @@ namespace FlowerShop.Controllers.Admin
         public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] bool? isActive,
             [FromQuery] int page = 1, [FromQuery] int limit = 20)
         {
-            (page, limit) = PagingHelper.Normalize(page, limit, defaultLimit: 20);
-
             var q = _context.Categories.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrEmpty(search))
@@ -33,13 +31,7 @@ namespace FlowerShop.Controllers.Admin
             if (isActive.HasValue)
                 q = q.Where(c => c.IsActive == isActive);
 
-            var total = await q.CountAsync();
-            var items = await q.OrderBy(c => c.SortOrder)
-                .Skip(PagingHelper.Skip(page, limit))
-                .Take(limit)
-                .ToListAsync();
-
-            return Ok(PagingHelper.Result(total, items, page, limit));
+            return Ok(await PagingHelper.PageAsync(q.OrderBy(c => c.SortOrder), page, limit, defaultLimit: 20));
         }
 
         [HttpPost]

@@ -1,38 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { contactAPI } from '../services/api';
 import { useAdmin } from '../context/AdminContext';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
-import { formatDate, readPagedResponse } from '../utils/format';
-
-const LIMIT = 10;
+import usePagedList from '../hooks/usePagedList';
+import { boolParam, formatDate } from '../utils/format';
 
 export default function ContactsPage() {
   const { addToast } = useAdmin();
-  const [list, setList] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [readFilter, setReadFilter] = useState('');
   const [detail, setDetail] = useState(null);
   const [confirm, setConfirm] = useState(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const params = { page, limit: LIMIT };
-      if (search) params.search = search;
-      if (readFilter !== '') params.isRead = readFilter === 'true';
-      const res = await contactAPI.getAll(params);
-      const { items, total } = readPagedResponse(res.data);
-      setList(items);
-      setTotal(total);
-    } catch { addToast('Lỗi tải liên hệ', 'error'); }
-    finally { setLoading(false); }
-  }
-
-  useEffect(() => { load(); }, [page, search, readFilter]);
+  const { list, total, totalPages, page, setPage, loading, load } = usePagedList(
+    contactAPI.getAll,
+    { search, isRead: boolParam(readFilter) },
+    'Loi tai lien he'
+  );
 
   const openDetail = async (id) => {
     try {
@@ -93,7 +77,7 @@ export default function ContactsPage() {
             </table>
           )}
         </div>
-        <Pagination current={page} total={Math.ceil(total / LIMIT)} onChange={setPage}/>
+        <Pagination current={page} total={totalPages} onChange={setPage}/>
       </div>
 
       {detail && (
