@@ -45,7 +45,7 @@ export default function CategoriesPage() {
         fd.append('file', imgFile);
         await categoryAPI.uploadImage(id, fd);
       }
-      addToast(editId ? 'Cập nhật thành công' : 'Thêm thành công');
+      addToast(editId ? `Cập nhật mục ${form.categoryName} thành công` : 'Thêm thành công');
       setModal(false); load();
     } catch { addToast('Lỗi lưu danh mục', 'error'); }
     finally { setSaving(false); }

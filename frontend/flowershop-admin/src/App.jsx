@@ -14,6 +14,7 @@ import BannersPage from './pages/BannersPage';
 import ContactsPage from './pages/ContactsPage';
 import ReportsPage from './pages/ReportsPage';
 
+//Ánh xạ page
 const PAGE_MAP = {
   dashboard: DashboardPage,
   categories: CategoriesPage,

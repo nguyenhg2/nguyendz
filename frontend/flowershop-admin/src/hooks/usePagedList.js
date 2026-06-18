@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAdmin } from '../context/AdminContext';
 import { cleanParams, readPagedResponse } from '../utils/format';
 
+//Set limit trên page
 export const LIST_LIMIT = 10;
 
 export default function usePagedList(apiGetAll, filters, errorMessage, limit = LIST_LIMIT) {
@@ -12,7 +13,7 @@ export default function usePagedList(apiGetAll, filters, errorMessage, limit = L
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const filterKey = JSON.stringify(filters);
-
+//Load lại page khi có thay đổi
   async function load(nextPage = page) {
     setLoading(true);
     try {

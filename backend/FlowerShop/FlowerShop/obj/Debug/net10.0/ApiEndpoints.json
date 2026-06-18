@@ -48,22 +48,6 @@
   },
   {
     "ContainingType": "FlowerShop.Controllers.Admin.BannerController",
-    "Method": "GetById",
-    "RelativePath": "api/admin/banners/{id}",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Int32",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "FlowerShop.Controllers.Admin.BannerController",
     "Method": "Update",
     "RelativePath": "api/admin/banners/{id}",
     "HttpMethod": "PUT",
@@ -178,22 +162,6 @@
       {
         "Name": "category",
         "Type": "FlowerShop.Data.Category",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "FlowerShop.Controllers.Admin.CategoryController",
-    "Method": "GetById",
-    "RelativePath": "api/admin/categories/{id}",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Int32",
         "IsRequired": true
       }
     ],
@@ -337,22 +305,6 @@
     "ReturnTypes": []
   },
   {
-    "ContainingType": "FlowerShop.Controllers.Admin.ContactController",
-    "Method": "MarkAsRead",
-    "RelativePath": "api/admin/contacts/{id}/read",
-    "HttpMethod": "PATCH",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Int32",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
     "ContainingType": "FlowerShop.Controllers.Admin.DashboardController",
     "Method": "GetRecentOrders",
     "RelativePath": "api/admin/dashboard/recent-orders",
@@ -411,11 +363,6 @@
         "IsRequired": false
       },
       {
-        "Name": "PageSize",
-        "Type": "System.Int32",
-        "IsRequired": false
-      },
-      {
         "Name": "Status",
         "Type": "System.String",
         "IsRequired": false
@@ -426,17 +373,7 @@
         "IsRequired": false
       },
       {
-        "Name": "FromDate",
-        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
         "Name": "DateFrom",
-        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "ToDate",
         "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
       },
@@ -786,16 +723,6 @@
         "IsRequired": false
       },
       {
-        "Name": "ProductId",
-        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "UserId",
-        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
         "Name": "MinRating",
         "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
@@ -861,43 +788,6 @@
         "Name": "IsActive",
         "Type": "System.Nullable\u00601[[System.Boolean, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "FlowerShop.Controllers.Admin.UserController",
-    "Method": "GetById",
-    "RelativePath": "api/admin/users/{id}",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Int32",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "FlowerShop.Controllers.Admin.UserController",
-    "Method": "Update",
-    "RelativePath": "api/admin/users/{id}",
-    "HttpMethod": "PUT",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Int32",
-        "IsRequired": true
-      },
-      {
-        "Name": "data",
-        "Type": "FlowerShop.Data.User",
-        "IsRequired": true
       }
     ],
     "ReturnTypes": []

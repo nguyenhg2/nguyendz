@@ -25,8 +25,10 @@ export const PAGE_TITLES = Object.fromEntries(
   MENU_ITEMS.filter(item => item.key).map(item => [item.key, item.title || item.label])
 );
 
+//Kiểm tra page
 export const normalizeAdminPage = (page) => (
   ADMIN_PAGES.includes(page) ? page : DEFAULT_ADMIN_PAGE
 );
 
+//Trả về URL Page
 export const pagePath = (page) => `/${normalizeAdminPage(page)}`;

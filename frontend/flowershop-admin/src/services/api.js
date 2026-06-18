@@ -72,6 +72,7 @@ export const productAPI = {
   uploadImages: (id, formData) => api.post(`/admin/products/${id}/images`, formData),
   deleteImage: (id, imageId) => api.delete(`/admin/products/${id}/images/${imageId}`),
   setMainImage: (id, imageId) => api.patch(`/admin/products/${id}/images/${imageId}/set-main`),
+  inStockCount: () => api.get(`/admin/products/in-stock-count`),
 };
 
 export const orderAPI = {

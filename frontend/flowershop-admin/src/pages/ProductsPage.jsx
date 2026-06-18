@@ -24,6 +24,7 @@ export default function ProductsPage() {
   const [imgFiles, setImgFiles] = useState([]);
   const [mainIdx, setMainIdx] = useState(0);
   const [existingImages, setExistingImages] = useState([]);
+  const [inStockCount, setInStockCount] = useState(0);
   const { list, total, totalPages, page, setPage, loading, load } = usePagedList(
     productAPI.getAll,
     {
@@ -56,6 +57,7 @@ export default function ProductsPage() {
 
   useEffect(() => { categoryAPI.getAll({ limit: 100 }).then(r => setCats(r.data.items || r.data || [])); }, []);
   useEffect(() => () => filePreviews.forEach(p => URL.revokeObjectURL(p.url)), [filePreviews]);
+  useEffect(() => {productAPI.inStockCount().then(r => setInStockCount(r.data))}, []);
 
   const resetFilter = () => { setSearch(''); setCatFilter(''); setActiveFilter(''); setFeaturedFilter(''); setMinPrice(''); setMaxPrice(''); setSortBy(''); setPage(1); };
 
@@ -129,7 +131,7 @@ export default function ProductsPage() {
       <div className="page-header">
         <div>
           <div className="page-title">Quản lý sản phẩm</div>
-          <div className="page-subtitle">{total} sản phẩm</div>
+          <div className="page-subtitle">{total} sản phẩm . {inStockCount} sản phẩm còn hàng</div>
         </div>
         <button className="btn btn-primary" onClick={openAdd}>+ Thêm sản phẩm</button>
       </div>
@@ -185,7 +187,7 @@ export default function ProductsPage() {
                     </td>
                     <td>{formatCurrency(p.price)}</td>
                     <td>{p.discountPrice ? formatCurrency(p.discountPrice) : '-'}</td>
-                    <td>{p.stockQuantity}</td>
+                    <td>{p.stockQuantity}{p.stockQuantity === 0 && <span className="badge badge-inactive" style = {{marginLeft: 6}}>Hết hàng</span>}</td>
                     <td>{p.soldQuantity}</td>
                     <td>
                       <label className={`switch${isProductLockedByCategory(p) ? ' switch-disabled' : ''}`} title={isProductLockedByCategory(p) ? 'Danh mục đã ẩn nên không thể đổi trạng thái sản phẩm' : ''}>
@@ -289,7 +291,7 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {confirm && <ConfirmModal title="Xóa sản phẩm" message="Bạn có chắc chắn muốn xóa sản phẩm này?" onConfirm={handleDelete} onCancel={() => setConfirm(null)}/>}
+      {confirm && <ConfirmModal title="Xóa sản phẩm" message={`Bạn có chắc chắn muốn xóa sản phẩm '${list.find(p => p.productId === confirm)?.productName}' không?`} onConfirm={handleDelete} onCancel={() => setConfirm(null)}/>}
     </div>
   );
 }

@@ -15,6 +15,7 @@ export function AdminProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  //Hàm login
   useEffect(() => {
     const token = adminAuth.getToken();
     if (!token) { setLoading(false); return; }
@@ -37,12 +38,14 @@ export function AdminProvider({ children }) {
       });
   }, []);
 
+  //Check nút reload, backward
   useEffect(() => {
     const onPopState = () => setPage(pageFromLocation());
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  //Hàm set url trang
   const navigate = useCallback((p) => {
     const nextPage = normalizeAdminPage(p);
     setPage(nextPage);
@@ -52,12 +55,14 @@ export function AdminProvider({ children }) {
     }
   }, []);
 
+  //Hàm thông báo
   const addToast = useCallback((msg, type = 'success') => {
     const id = `${Date.now()}-${Math.random()}`;
     setToasts(t => [...t, { id, msg, type }]);
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3000);
   }, []);
 
+  //Hàm logout
   const logout = useCallback(() => {
     adminAuth.clearToken();
     setAdmin(null);

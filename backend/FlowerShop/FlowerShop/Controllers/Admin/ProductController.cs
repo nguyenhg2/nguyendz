@@ -31,6 +31,13 @@ namespace FlowerShop.Controllers.Admin
             return Ok(await PagingHelper.PageAsync(q, f.Page, f.Limit));
         }
 
+        [HttpGet("in-stock-count")]
+        public async Task<IActionResult> GetInStockCount()
+        {
+            var count = await _context.Products.CountAsync(p => p.StockQuantity > 0);
+            return Ok(count);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
