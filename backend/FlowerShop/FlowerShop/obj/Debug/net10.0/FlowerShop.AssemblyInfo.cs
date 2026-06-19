@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FlowerShop")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+888229d3805588e679548ca42cd50907126eb887")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ae4b8c0615657b1f879249dd9e1b1427a68eb14d")]
 [assembly: System.Reflection.AssemblyProductAttribute("FlowerShop")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FlowerShop")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

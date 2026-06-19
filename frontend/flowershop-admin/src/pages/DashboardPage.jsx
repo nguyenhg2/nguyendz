@@ -6,7 +6,7 @@ import { ORDER_STATUS_BADGE, orderStatusLabel } from '../constants/orderStatus';
 import { formatCurrency, formatDate, formatNumber } from '../utils/format';
 
 const paymentLabel = (method) => {
-  return String(method || '').toLowerCase() === 'cod' ? 'COD' : 'Thanh toán';
+  return String(method || '').toLowerCase() === 'cod' ? 'COD' : 'Chuyển khoản';
 };
 
 export default function DashboardPage() {

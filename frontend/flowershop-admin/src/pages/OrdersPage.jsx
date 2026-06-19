@@ -15,7 +15,7 @@ import {
 import { formatCurrency, formatDate, imageSrc } from '../utils/format';
 
 const paymentLabel = (method) => (
-  String(method || '').toLowerCase() === 'cod' ? 'COD' : 'Thanh toán'
+  String(method || '').toLowerCase() === 'cod' ? 'COD' : 'Chuyển khoản'
 );
 
 const orderItems = (order) => order?.orderDetails || [];
@@ -165,7 +165,7 @@ export default function OrdersPage() {
         <select value={paymentFilter} onChange={e => { setPaymentFilter(e.target.value); setPage(1); }}>
           <option value="">Tất cả thanh toán</option>
           <option value="cod">COD</option>
-          <option value="payment">Thanh toán</option>
+          <option value="payment">Chuyển khoản</option>
         </select>
 
         <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} />
